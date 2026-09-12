@@ -1,0 +1,66 @@
+services:
+  mysql:
+    image: mysql:8.0.42
+    container_name: junjun-mysql
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ry-vue
+    ports:
+      - "3306:3306"
+    command:
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_general_ci
+      --explicit_defaults_for_timestamp=true
+      --lower_case_table_names=1
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./script/sql/ry_vue_5.X.sql:/docker-entrypoint-initdb.d/01-ry.sql:ro
+      - ./script/sql/ry_workflow.sql:/docker-entrypoint-initdb.d/02-workflow.sql:ro
+      - ./script/sql/nail_business.sql:/docker-entrypoint-initdb.d/03-nail.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.2.8
+    container_name: junjun-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--requirepass", "ruoyi123"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "ruoyi123", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: junjun-backend
+    environment:
+      TZ: Asia/Shanghai
+      SERVER_PORT: 18080
+    ports:
+      - "18080:18080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    container_name: junjun-web
+    ports:
+      - "18480:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql-data:
