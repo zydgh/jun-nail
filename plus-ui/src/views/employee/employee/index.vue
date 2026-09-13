@@ -168,6 +168,7 @@ const buttonLoading = ref(false);
 const loading = ref(true);
 const showSearch = ref(true);
 const ids = ref<Array<string | number>>([]);
+const employeeNos = ref<string[]>([]);
 const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
@@ -226,6 +227,7 @@ const resetQuery = () => {
 };
 const handleSelectionChange = (selection: NailEmployeeVO[]) => {
   ids.value = selection.map((item) => item.id!);
+  employeeNos.value = selection.map((item) => item.employeeNo!).filter(Boolean);
   single.value = selection.length !== 1;
   multiple.value = !selection.length;
 };
@@ -259,7 +261,8 @@ const submitForm = () => {
 };
 const handleDelete = async (row?: NailEmployeeVO) => {
   const _ids = row?.id || ids.value;
-  await proxy?.$modal.confirm('是否确认删除员工编号为"' + _ids + '"的数据项？');
+  const _employeeNos = row?.employeeNo || employeeNos.value.join('、');
+  await proxy?.$modal.confirm('是否确认删除员工编号为"' + _employeeNos + '"的数据项？');
   await delNailEmployee(_ids);
   await getList();
   proxy?.$modal.msgSuccess('删除成功');
