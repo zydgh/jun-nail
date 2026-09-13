@@ -34,6 +34,8 @@ import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
@@ -42,6 +44,7 @@ import java.util.function.Consumer;
 /**
  * S3 存储协议 所有兼容S3协议的云厂商均支持
  * 阿里云 腾讯云 七牛云 minio
+ * 当 configKey 为 local 时走本地磁盘存储
  *
  * @author AprilWind
  */
@@ -57,6 +60,16 @@ public class OssClient {
      * 配置属性
      */
     private final OssProperties properties;
+
+    /**
+     * 是否本地磁盘存储
+     */
+    private final boolean localMode;
+
+    /**
+     * 本地磁盘根目录
+     */
+    private final Path localRoot;
 
     /**
      * Amazon S3 异步客户端
@@ -82,15 +95,24 @@ public class OssClient {
     public OssClient(String configKey, OssProperties ossProperties) {
         this.configKey = configKey;
         this.properties = ossProperties;
+        this.localMode = isLocalConfig(configKey, ossProperties);
         try {
-            // 创建 AWS 认证信息
+            if (this.localMode) {
+                this.client = null;
+                this.transferManager = null;
+                this.presigner = null;
+                String dirName = StringUtils.isNotBlank(properties.getBucketName()) ? properties.getBucketName() : "uploads";
+                this.localRoot = Paths.get(System.getProperty("user.dir"), dirName).toAbsolutePath().normalize();
+                Files.createDirectories(this.localRoot);
+                log.info("本地OSS存储目录 => {}", this.localRoot);
+                return;
+            }
+            this.localRoot = null;
             StaticCredentialsProvider credentialsProvider = StaticCredentialsProvider.create(
                 AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey()));
 
-            // MinIO 使用 HTTPS 限制使用域名访问，站点填域名。需要启用路径样式访问
             boolean isStyle = !StringUtils.containsAny(properties.getEndpoint(), OssConstant.CLOUD_SERVICE);
 
-            // 创建AWS基于 Netty 的 S3 客户端
             this.client = S3AsyncClient.builder()
                 .credentialsProvider(credentialsProvider)
                 .endpointOverride(URI.create(getEndpoint()))
@@ -104,14 +126,11 @@ public class OssClient {
                     .build())
                 .build();
 
-            //AWS基于 CRT 的 S3 AsyncClient 实例用作 S3 传输管理器的底层客户端
             this.transferManager = S3TransferManager.builder().s3Client(this.client).build();
 
-            // 创建 S3 配置对象
             S3Configuration config = S3Configuration.builder().chunkedEncodingEnabled(false)
                 .pathStyleAccessEnabled(isStyle).build();
 
-            // 创建 预签名 URL 的生成器 实例，用于生成 S3 预签名 URL
             this.presigner = S3Presigner.builder()
                 .region(of())
                 .credentialsProvider(credentialsProvider)
@@ -120,11 +139,16 @@ public class OssClient {
                 .build();
 
         } catch (Exception e) {
-            if (e instanceof OssException) {
-                throw e;
+            if (e instanceof OssException ossException) {
+                throw ossException;
             }
             throw new OssException("配置错误! 请检查系统配置:[" + e.getMessage() + "]");
         }
+    }
+
+    private static boolean isLocalConfig(String configKey, OssProperties properties) {
+        return OssConstant.LOCAL_CONFIG_KEY.equalsIgnoreCase(configKey)
+            || OssConstant.LOCAL_CONFIG_KEY.equalsIgnoreCase(properties.getEndpoint());
     }
 
     /**
@@ -138,8 +162,19 @@ public class OssClient {
      * @throws OssException 如果上传失败，抛出自定义异常
      */
     public UploadResult upload(Path filePath, String key, String md5Digest, String contentType) {
+        if (localMode) {
+            try {
+                Path target = resolveLocalPath(key);
+                Files.createDirectories(target.getParent());
+                Files.copy(filePath, target, StandardCopyOption.REPLACE_EXISTING);
+                return UploadResult.builder().url(getUrl() + StringUtils.SLASH + key).filename(key).eTag(md5Digest).build();
+            } catch (Exception e) {
+                throw new OssException("上传文件失败，请检查配置信息:[" + e.getMessage() + "]");
+            } finally {
+                FileUtils.del(filePath);
+            }
+        }
         try {
-            // 构建上传请求对象
             FileUpload fileUpload = transferManager.uploadFile(
                 x -> {
                     x.source(filePath).putObjectRequest(
@@ -147,9 +182,6 @@ public class OssClient {
                             .key(key)
                             .contentMD5(StringUtils.isNotEmpty(md5Digest) ? md5Digest : null)
                             .contentType(contentType)
-                            // 用于设置对象的访问控制列表（ACL）。不同云厂商对ACL的支持和实现方式有所不同，
-                            // 因此根据具体的云服务提供商，你可能需要进行不同的配置（自行开启，阿里云有acl权限配置，腾讯云没有acl权限配置）
-                            //.acl(getAccessPolicy().getObjectCannedACL())
                             .build()
                     );
                     if (log.isDebugEnabled()) {
@@ -157,17 +189,13 @@ public class OssClient {
                     }
                 }
             );
-            // 等待上传完成并获取上传结果
             CompletedFileUpload uploadResult = fileUpload.completionFuture().join();
             String eTag = uploadResult.response().eTag();
 
-            // 提取上传结果中的 ETag，并构建一个自定义的 UploadResult 对象
             return UploadResult.builder().url(getUrl() + StringUtils.SLASH + key).filename(key).eTag(eTag).build();
         } catch (Exception e) {
-            // 捕获异常并抛出自定义异常
             throw new OssException("上传文件失败，请检查配置信息:[" + e.getMessage() + "]");
         } finally {
-            // 无论上传是否成功，最终都会删除临时文件
             FileUtils.del(filePath);
         }
     }
@@ -183,27 +211,31 @@ public class OssClient {
      * @throws OssException 如果上传失败，抛出自定义异常
      */
     public UploadResult upload(InputStream inputStream, String key, Long length, String contentType) {
-        // 如果输入流不是 ByteArrayInputStream，则将其读取为字节数组再创建 ByteArrayInputStream
         if (!(inputStream instanceof ByteArrayInputStream)) {
             inputStream = new ByteArrayInputStream(IoUtil.readBytes(inputStream));
         }
+        if (localMode) {
+            try {
+                Path target = resolveLocalPath(key);
+                Files.createDirectories(target.getParent());
+                Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);
+                return UploadResult.builder().url(getUrl() + StringUtils.SLASH + key).filename(key).build();
+            } catch (Exception e) {
+                throw new OssException("上传文件失败，请检查配置信息:[" + e.getMessage() + "]");
+            }
+        }
         try {
-            // 创建异步请求体（length如果为空会报错）
             BlockingInputStreamAsyncRequestBody body = BlockingInputStreamAsyncRequestBody.builder()
                 .contentLength(length)
                 .subscribeTimeout(Duration.ofSeconds(120))
                 .build();
 
-            // 使用 transferManager 进行上传
             Upload upload = transferManager.upload(
                 x -> {
                     x.requestBody(body).putObjectRequest(
                         y -> y.bucket(properties.getBucketName())
                             .key(key)
                             .contentType(contentType)
-                            // 用于设置对象的访问控制列表（ACL）。不同云厂商对ACL的支持和实现方式有所不同，
-                            // 因此根据具体的云服务提供商，你可能需要进行不同的配置（自行开启，阿里云有acl权限配置，腾讯云没有acl权限配置）
-                            //.acl(getAccessPolicy().getObjectCannedACL())
                             .build()
                     );
                     if (log.isDebugEnabled()) {
@@ -212,14 +244,11 @@ public class OssClient {
                 }
             );
 
-            // 将输入流写入请求体
             body.writeInputStream(inputStream);
 
-            // 等待文件上传操作完成
             CompletedUpload uploadResult = upload.completionFuture().join();
             String eTag = uploadResult.response().eTag();
 
-            // 提取上传结果中的 ETag，并构建一个自定义的 UploadResult 对象
             return UploadResult.builder().url(getUrl() + StringUtils.SLASH + key).filename(key).eTag(eTag).build();
         } catch (Exception e) {
             throw new OssException("上传文件失败，请检查配置信息:[" + e.getMessage() + "]");
@@ -234,9 +263,17 @@ public class OssClient {
      * @throws OssException 如果下载失败，抛出自定义异常
      */
     public Path fileDownload(String path) {
-        // 构建临时文件
+        if (localMode) {
+            try {
+                Path source = resolveLocalPath(removeBaseUrl(path));
+                Path tempFilePath = FileUtils.createTempFile().toPath();
+                Files.copy(source, tempFilePath, StandardCopyOption.REPLACE_EXISTING);
+                return tempFilePath;
+            } catch (Exception e) {
+                throw new OssException("文件下载失败，错误信息:[" + e.getMessage() + "]");
+            }
+        }
         Path tempFilePath = FileUtils.createTempFile().toPath();
-        // 使用 S3TransferManager 下载文件
         FileDownload downloadFile = transferManager.downloadFile(
             x -> {
                 x.destination(tempFilePath).getObjectRequest(
@@ -249,7 +286,6 @@ public class OssClient {
                 }
             }
         );
-        // 等待文件下载操作完成
         downloadFile.completionFuture().join();
         return tempFilePath;
     }
@@ -279,29 +315,35 @@ public class OssClient {
      * @throws OssException 如果下载失败，抛出自定义异常
      */
     public WriteOutSubscriber<OutputStream> download(String key, Consumer<Long> contentLengthConsumer) {
+        if (localMode) {
+            try {
+                Path source = resolveLocalPath(key);
+                long size = Files.size(source);
+                Optional.ofNullable(contentLengthConsumer).ifPresent(c -> c.accept(size));
+                return out -> {
+                    try (InputStream in = Files.newInputStream(source)) {
+                        IoUtil.copy(in, out);
+                    }
+                };
+            } catch (Exception e) {
+                throw new OssException("文件下载失败，错误信息:[" + e.getMessage() + "]");
+            }
+        }
         try {
             DownloadRequest.TypedBuilder<ResponsePublisher<GetObjectResponse>> typedBuilder = DownloadRequest.builder()
-                // 使用发布订阅转换器
                 .responseTransformer(AsyncResponseTransformer.toPublisher())
-                // 文件对象
                 .getObjectRequest(y -> y.bucket(properties.getBucketName()).key(key).build());
             if (log.isDebugEnabled()) {
                 typedBuilder.addTransferListener(LoggingTransferListener.create());
             }
 
-            // 使用 S3TransferManager 下载文件
             Download<ResponsePublisher<GetObjectResponse>> publisherDownload = transferManager.download(typedBuilder.build());
-            // 获取下载发布订阅转换器
             ResponsePublisher<GetObjectResponse> publisher = publisherDownload.completionFuture().join().result();
-            // 执行文件大小消费者函数
             Optional.ofNullable(contentLengthConsumer)
                 .ifPresent(lengthConsumer -> lengthConsumer.accept(publisher.response().contentLength()));
 
-            // 构建写出订阅器对象
             return out -> {
-                // 创建可写入的字节通道
                 try (WritableByteChannel channel = Channels.newChannel(out)) {
-                    // 订阅数据
                     publisher.subscribe(byteBuffer -> {
                         while (byteBuffer.hasRemaining()) {
                             try {
@@ -324,6 +366,14 @@ public class OssClient {
      * @param path 指定路径
      */
     public void delete(String path) {
+        if (localMode) {
+            try {
+                Files.deleteIfExists(resolveLocalPath(removeBaseUrl(path)));
+            } catch (Exception e) {
+                throw new OssException("删除文件失败，请检查配置信息:[" + e.getMessage() + "]");
+            }
+            return;
+        }
         try {
             client.deleteObject(
                 x -> x.bucket(properties.getBucketName())
@@ -341,7 +391,9 @@ public class OssClient {
      * @param expiredTime 链接授权到期时间
      */
     public String createPresignedGetUrl(String objectKey, Duration expiredTime) {
-        // 使用 AWS S3 预签名 URL 的生成器 获取下载对象的预签名 URL
+        if (localMode) {
+            return getUrl() + StringUtils.SLASH + objectKey;
+        }
         URL url = presigner.presignGetObject(
                 x -> x.signatureDuration(expiredTime)
                     .getObjectRequest(
@@ -361,7 +413,9 @@ public class OssClient {
      * @param metadata    元数据
      */
     public String createPresignedPutUrl(String objectKey, Duration expiredTime, Map<String, String> metadata) {
-        // 使用 AWS S3 预签名 URL 的生成器 获取上传文件对象的预签名 URL
+        if (localMode) {
+            throw new OssException("本地存储不支持预签名上传");
+        }
         URL url = presigner.presignPutObject(
                 x -> x.signatureDuration(expiredTime)
                     .putObjectRequest(
@@ -418,13 +472,9 @@ public class OssClient {
      * @return 输入流
      */
     public InputStream getObjectContent(String path) throws IOException {
-        // 下载文件到临时目录
         Path tempFilePath = fileDownload(path);
-        // 创建输入流
         InputStream inputStream = Files.newInputStream(tempFilePath);
-        // 删除临时文件
         FileUtils.del(tempFilePath);
-        // 返回对象内容的输入流
         return inputStream;
     }
 
@@ -434,9 +484,7 @@ public class OssClient {
      * @return 终端点 URL
      */
     public String getEndpoint() {
-        // 根据配置文件中的是否使用 HTTPS，设置协议头部
         String header = getIsHttps();
-        // 拼接协议头部和终端点，得到完整的终端点 URL
         return header + properties.getEndpoint();
     }
 
@@ -446,22 +494,18 @@ public class OssClient {
      * @return 终端点 URL
      */
     public String getDomain() {
-        // 从配置中获取域名、终端点、是否使用 HTTPS 等信息
         String domain = properties.getDomain();
         String endpoint = properties.getEndpoint();
         String header = getIsHttps();
 
-        // 如果是云服务商，直接返回域名或终端点
         if (StringUtils.containsAny(endpoint, OssConstant.CLOUD_SERVICE)) {
             return StringUtils.isNotEmpty(domain) ? header + domain : header + endpoint;
         }
 
-        // 如果是 MinIO，处理域名并返回
         if (StringUtils.isNotEmpty(domain)) {
             return domain.startsWith(Constants.HTTPS) || domain.startsWith(Constants.HTTP) ? domain : header + domain;
         }
 
-        // 返回终端点
         return header + endpoint;
     }
 
@@ -473,9 +517,7 @@ public class OssClient {
      * @return 对应的 AWS 区域对象，或者默认的广泛支持的区域（us-east-1）
      */
     public Region of() {
-        //AWS 区域字符串
         String region = properties.getRegion();
-        // 如果 region 参数非空，使用 Region.of 方法创建对应的 AWS 区域对象，否则返回默认区域
         return StringUtils.isNotEmpty(region) ? Region.of(region) : Region.US_EAST_1;
     }
 
@@ -485,16 +527,23 @@ public class OssClient {
      * @return 文件路径
      */
     public String getUrl() {
+        if (localMode) {
+            String domain = properties.getDomain();
+            if (StringUtils.isNotEmpty(domain)) {
+                return domain.startsWith(Constants.HTTPS) || domain.startsWith(Constants.HTTP)
+                    || domain.startsWith(StringUtils.SLASH)
+                    ? StringUtils.removeEnd(domain, StringUtils.SLASH)
+                    : OssConstant.LOCAL_RESOURCE_PREFIX;
+            }
+            return OssConstant.LOCAL_RESOURCE_PREFIX;
+        }
         String domain = properties.getDomain();
         String endpoint = properties.getEndpoint();
         String header = getIsHttps();
-        // 云服务商直接返回
         if (StringUtils.containsAny(endpoint, OssConstant.CLOUD_SERVICE)) {
             return header + (StringUtils.isNotEmpty(domain) ? domain : properties.getBucketName() + "." + endpoint);
         }
-        // MinIO 单独处理
         if (StringUtils.isNotEmpty(domain)) {
-            // 如果 domain 以 "https://" 或 "http://" 开头
             return (domain.startsWith(Constants.HTTPS) || domain.startsWith(Constants.HTTP)) ?
                 domain + StringUtils.SLASH + properties.getBucketName() : header + domain + StringUtils.SLASH + properties.getBucketName();
         }
@@ -509,11 +558,8 @@ public class OssClient {
      * @return 文件路径
      */
     public String getPath(String prefix, String suffix) {
-        // 生成uuid
         String uuid = IdUtil.fastSimpleUUID();
-        // 生成日期路径
         String datePath = DateUtils.datePath();
-        // 拼接路径
         String path = StringUtils.isNotEmpty(prefix) ?
             prefix + StringUtils.SLASH + datePath + StringUtils.SLASH + uuid : datePath + StringUtils.SLASH + uuid;
         return path + suffix;
@@ -534,6 +580,20 @@ public class OssClient {
      */
     public String getConfigKey() {
         return configKey;
+    }
+
+    /**
+     * 是否本地磁盘存储
+     */
+    public boolean isLocalMode() {
+        return localMode;
+    }
+
+    /**
+     * 本地磁盘根目录
+     */
+    public Path getLocalRoot() {
+        return localRoot;
     }
 
     /**
@@ -559,6 +619,14 @@ public class OssClient {
      */
     public AccessPolicyType getAccessPolicy() {
         return AccessPolicyType.getByType(properties.getAccessPolicy());
+    }
+
+    private Path resolveLocalPath(String key) {
+        Path resolved = localRoot.resolve(key).normalize();
+        if (!resolved.startsWith(localRoot)) {
+            throw new OssException("非法文件路径");
+        }
+        return resolved;
     }
 
 }

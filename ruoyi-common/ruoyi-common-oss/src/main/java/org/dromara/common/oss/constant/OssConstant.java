@@ -25,12 +25,22 @@ public interface OssConstant {
     /**
      * 系统数据ids
      */
-    List<Long> SYSTEM_DATA_IDS = Arrays.asList(1L, 2L, 3L, 4L);
+    List<Long> SYSTEM_DATA_IDS = Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L);
 
     /**
      * 云服务商
      */
     String[] CLOUD_SERVICE = new String[] {"aliyun", "qcloud", "qiniu", "obs"};
+
+    /**
+     * 本地磁盘存储配置 key
+     */
+    String LOCAL_CONFIG_KEY = "local";
+
+    /**
+     * 本地文件对外访问前缀
+     */
+    String LOCAL_RESOURCE_PREFIX = "/profile";
 
     /**
      * https 状态

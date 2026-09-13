@@ -15,6 +15,7 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.nio.file.Paths;
 import java.util.Date;
 
 /**
@@ -24,6 +25,8 @@ import java.util.Date;
  */
 @AutoConfiguration
 public class ResourcesConfig implements WebMvcConfigurer {
+
+    private static final String LOCAL_RESOURCE_PREFIX = "/profile";
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -45,6 +48,10 @@ public class ResourcesConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        String localPath = Paths.get(System.getProperty("user.dir"), "uploads").toAbsolutePath().normalize()
+            .toUri().toASCIIString();
+        registry.addResourceHandler(LOCAL_RESOURCE_PREFIX + "/**")
+            .addResourceLocations(localPath.endsWith("/") ? localPath : localPath + "/");
     }
 
     /**

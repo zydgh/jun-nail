@@ -55,3 +55,6 @@ plus-ui/node_modules/
 plus-ui/dist/
 logs/
 
+
+# Local OSS uploads
+uploads/
