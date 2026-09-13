@@ -24,13 +24,13 @@ export default defineConfig(({ mode, command }) => {
       open: false,
       proxy: {
         [env.VITE_APP_BASE_API]: {
-          target: 'http://localhost:18080',
+          target: 'http://127.0.0.1:18080',
           changeOrigin: true,
           ws: true,
           rewrite: (path) => path.replace(new RegExp('^' + env.VITE_APP_BASE_API), '')
         },
         '/profile': {
-          target: 'http://localhost:18080',
+          target: 'http://127.0.0.1:18080',
           changeOrigin: true
         },
         '/oss-proxy': {
