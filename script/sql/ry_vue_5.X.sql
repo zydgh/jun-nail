@@ -883,7 +883,7 @@ insert into sys_oss_config values (2, '000000', 'qiniu',  'XXXXXXXXXXXXXXX',  'X
 insert into sys_oss_config values (3, '000000', 'aliyun', 'XXXXXXXXXXXXXXX',  'XXXXXXXXXXXXXXX', 'ruoyi',             '', 'oss-cn-beijing.aliyuncs.com',   '','N', '',             '1' ,'1', '', 103, 1, sysdate(), 1, sysdate(), null);
 insert into sys_oss_config values (4, '000000', 'qcloud', 'XXXXXXXXXXXXXXX',  'XXXXXXXXXXXXXXX', 'ruoyi-1240000000',  '', 'cos.ap-beijing.myqcloud.com',   '','N', 'ap-beijing',   '1' ,'1', '', 103, 1, sysdate(), 1, sysdate(), null);
 insert into sys_oss_config values (5, '000000', 'image',  'ruoyi',            'ruoyi123',        'ruoyi',             'image', '127.0.0.1:9000',           '','N', '',             '1' ,'1', '', 103, 1, sysdate(), 1, sysdate(), null);
-insert into sys_oss_config values (6, '000000', 'local',  'local',            'local',           'uploads',           '', 'local',                        '','N', '',             '1' ,'0', '本地磁盘存储，无需 MinIO', 103, 1, sysdate(), 1, sysdate(), null);
+insert into sys_oss_config values (6, '000000', 'local',  'local',            'local',           'uploads',           '', 'local',                        '','N', '',             '1' ,'0', '', 103, 1, sysdate(), 1, sysdate(), '本地磁盘存储，无需 MinIO');
 
 -- ----------------------------
 -- 系统授权表
