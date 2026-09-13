@@ -45,7 +45,13 @@ npm run dev
 
 开发环境配置见 `ruoyi-admin/src/main/resources/application-dev.yml`（数据源 `root/root`，库名 `ry-vue`）。
 
-文件上传默认使用**本地磁盘存储**（`sys_oss_config.config_key=local`），文件落在项目目录 `uploads/`，通过 `/profile/**` 访问，无需启动 MinIO。若已有旧库，可执行 `script/sql/fix_oss_local.sql` 切换。
+文件上传默认使用 **MinIO** 对象存储（`sys_oss_config.config_key=minio`，账号 `ruoyi/ruoyi123`，桶 `ruoyi`，端口 `9000`）。本地开发先启动：
+
+```bash
+bash script/bin/start-minio.sh
+```
+
+若已有旧库被切到 local，可执行 `script/sql/fix_oss_minio.sql` 切回 MinIO。
 
 ## Docker 部署
 

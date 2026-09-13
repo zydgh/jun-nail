@@ -58,3 +58,6 @@ logs/
 
 # Local OSS uploads
 uploads/
+
+# Downloaded tool binaries
+tools/
