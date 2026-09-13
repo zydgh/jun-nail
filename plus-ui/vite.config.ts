@@ -32,6 +32,11 @@ export default defineConfig(({ mode, command }) => {
         '/profile': {
           target: 'http://localhost:18080',
           changeOrigin: true
+        },
+        '/oss-proxy': {
+          target: 'http://127.0.0.1:9000',
+          changeOrigin: true,
+          rewrite: (p) => p.replace(/^\/oss-proxy/, '')
         }
       }
     },

@@ -544,6 +544,9 @@ public class OssClient {
             return header + (StringUtils.isNotEmpty(domain) ? domain : properties.getBucketName() + "." + endpoint);
         }
         if (StringUtils.isNotEmpty(domain)) {
+            if (domain.startsWith(StringUtils.SLASH)) {
+                return StringUtils.removeEnd(domain, StringUtils.SLASH) + StringUtils.SLASH + properties.getBucketName();
+            }
             return (domain.startsWith(Constants.HTTPS) || domain.startsWith(Constants.HTTP)) ?
                 domain + StringUtils.SLASH + properties.getBucketName() : header + domain + StringUtils.SLASH + properties.getBucketName();
         }
