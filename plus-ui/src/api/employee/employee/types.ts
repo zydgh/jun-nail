@@ -10,6 +10,8 @@ export interface NailEmployeeVO {
   sex?: string;
   /** 头像 */
   avatar?: string;
+  /** 头像地址 */
+  avatarUrl?: string;
   /** 所属门店 */
   storeId?: number | string;
   /** 职位 */

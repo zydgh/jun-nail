@@ -14,7 +14,9 @@
               <el-input v-model="queryParams.phone" placeholder="请输入手机号" clearable @keyup.enter="handleQuery" />
             </el-form-item>
             <el-form-item label="性别" prop="sex">
-              <el-input v-model="queryParams.sex" placeholder="请输入性别" clearable @keyup.enter="handleQuery" />
+              <el-select v-model="queryParams.sex" placeholder="请选择性别" clearable>
+                <el-option v-for="dict in sys_user_sex" :key="dict.value" :label="dict.label" :value="dict.value" />
+              </el-select>
             </el-form-item>
             <el-form-item label="职位" prop="position">
               <el-input v-model="queryParams.position" placeholder="请输入职位" clearable @keyup.enter="handleQuery" />
@@ -59,8 +61,16 @@
         <el-table-column label="员工编号" align="center" prop="employeeNo" show-overflow-tooltip />
         <el-table-column label="姓名" align="center" prop="name" show-overflow-tooltip />
         <el-table-column label="手机号" align="center" prop="phone" show-overflow-tooltip />
-        <el-table-column label="性别" align="center" prop="sex" show-overflow-tooltip />
-        <el-table-column label="头像" align="center" prop="avatar" show-overflow-tooltip />
+        <el-table-column label="性别" align="center" prop="sex" width="80">
+          <template #default="scope">
+            <dict-tag :options="sys_user_sex" :value="scope.row.sex" />
+          </template>
+        </el-table-column>
+        <el-table-column label="头像" align="center" prop="avatarUrl" width="100">
+          <template #default="scope">
+            <image-preview :src="scope.row.avatarUrl" :width="50" :height="50" />
+          </template>
+        </el-table-column>
         <el-table-column label="所属门店" align="center" prop="storeId" show-overflow-tooltip />
         <el-table-column label="职位" align="center" prop="position" show-overflow-tooltip />
         <el-table-column label="等级" align="center" prop="grade" show-overflow-tooltip />
@@ -99,10 +109,12 @@
           <el-input v-model="form.phone" placeholder="请输入手机号" />
         </el-form-item>
         <el-form-item label="性别" prop="sex">
-          <el-input v-model="form.sex" placeholder="请输入性别" />
+          <el-select v-model="form.sex" placeholder="请选择性别">
+            <el-option v-for="dict in sys_user_sex" :key="dict.value" :label="dict.label" :value="dict.value" />
+          </el-select>
         </el-form-item>
         <el-form-item label="头像" prop="avatar">
-          <el-input v-model="form.avatar" placeholder="请输入头像" />
+          <image-upload v-model="form.avatar" :limit="1" />
         </el-form-item>
         <el-form-item label="所属门店" prop="storeId">
           <el-input v-model="form.storeId" placeholder="请输入所属门店" />
@@ -150,7 +162,7 @@ import { listNailEmployee, getNailEmployee, delNailEmployee, addNailEmployee, up
 import { NailEmployeeVO, NailEmployeeQuery, NailEmployeeForm } from '@/api/employee/employee/types';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
-const { sys_normal_disable } = toRefs<any>(proxy?.useDict('sys_normal_disable'));
+const { sys_normal_disable, sys_user_sex } = toRefs<any>(proxy?.useDict('sys_normal_disable', 'sys_user_sex'));
 const dataList = ref([] as any[]);
 const buttonLoading = ref(false);
 const loading = ref(true);

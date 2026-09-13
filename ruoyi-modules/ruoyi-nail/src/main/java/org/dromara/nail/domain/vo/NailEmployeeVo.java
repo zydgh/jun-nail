@@ -4,6 +4,8 @@ import cn.idev.excel.annotation.ExcelIgnoreUnannotated;
 import cn.idev.excel.annotation.ExcelProperty;
 import io.github.linpeilie.annotations.AutoMapper;
 import lombok.Data;
+import org.dromara.common.translation.annotation.Translation;
+import org.dromara.common.translation.constant.TransConstant;
 import org.dromara.nail.domain.NailEmployee;
 
 import java.io.Serial;
@@ -58,6 +60,12 @@ public class NailEmployeeVo implements Serializable {
      */
     @ExcelProperty(value = "头像")
     private String avatar;
+
+    /**
+     * 头像Url
+     */
+    @Translation(type = TransConstant.OSS_ID_TO_URL, mapper = "avatar")
+    private String avatarUrl;
 
     /**
      * 所属门店
