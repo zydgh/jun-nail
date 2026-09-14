@@ -18,6 +18,11 @@
                 <el-option v-for="dict in sys_user_sex" :key="dict.value" :label="dict.label" :value="dict.value" />
               </el-select>
             </el-form-item>
+            <el-form-item label="会员等级" prop="levelId">
+              <el-select v-model="queryParams.levelId" placeholder="请选择会员等级" clearable filterable>
+                <el-option v-for="item in enabledLevelOptions" :key="item.id" :label="item.levelName" :value="item.id" />
+              </el-select>
+            </el-form-item>
             <el-form-item label="来源" prop="source">
               <el-input v-model="queryParams.source" placeholder="请输入来源" clearable @keyup.enter="handleQuery" />
             </el-form-item>
@@ -72,7 +77,11 @@
           </template>
         </el-table-column>
         <el-table-column label="生日" align="center" prop="birthday" width="160" />
-        <el-table-column label="会员等级" align="center" prop="levelId" show-overflow-tooltip />
+        <el-table-column label="会员等级" align="center" prop="levelId" show-overflow-tooltip>
+          <template #default="scope">
+            <span>{{ levelNameMap[scope.row.levelId] || '-' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="积分" align="center" prop="point" show-overflow-tooltip />
         <el-table-column label="余额" align="center" prop="balance" show-overflow-tooltip />
         <el-table-column label="累计充值" align="center" prop="totalRecharge" show-overflow-tooltip />
@@ -121,7 +130,9 @@
           <el-date-picker v-model="form.birthday" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择生日" />
         </el-form-item>
         <el-form-item label="会员等级" prop="levelId">
-          <el-input v-model="form.levelId" placeholder="请输入会员等级" />
+          <el-select v-model="form.levelId" placeholder="请选择会员等级" clearable filterable>
+            <el-option v-for="item in enabledLevelOptions" :key="item.id" :label="item.levelName" :value="item.id" />
+          </el-select>
         </el-form-item>
         <el-form-item label="积分" prop="point">
           <el-input v-model="form.point" placeholder="请输入积分" />
@@ -185,10 +196,16 @@
 import { listNailMember, getNailMember, delNailMember, addNailMember, updateNailMember } from '@/api/member/member';
 import { NailMemberVO, NailMemberQuery, NailMemberForm } from '@/api/member/member/types';
 import { rechargeMember, birthdayMember } from '@/api/member/member';
+import { listNailMemberLevel } from '@/api/member/level';
+import { NailMemberLevelVO } from '@/api/member/level/types';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const { sys_normal_disable, sys_user_sex } = toRefs<any>(proxy?.useDict('sys_normal_disable', 'sys_user_sex'));
 const dataList = ref([] as any[]);
+const levelOptions = ref<NailMemberLevelVO[]>([]);
+const enabledLevelOptions = computed(() =>
+  levelOptions.value.filter((item) => item.status === '0' || item.status == null || item.status === '')
+);
 const buttonLoading = ref(false);
 const loading = ref(true);
 const showSearch = ref(true);
@@ -200,6 +217,15 @@ const total = ref(0);
 const queryFormRef = ref<ElFormInstance>();
 const formRef = ref<ElFormInstance>();
 const dialog = reactive<DialogOption>({ visible: false, title: '' });
+const levelNameMap = computed(() => {
+  const map: Record<string, string> = {};
+  levelOptions.value.forEach((item) => {
+    if (item.id != null) {
+      map[String(item.id)] = item.levelName || '';
+    }
+  });
+  return map;
+});
 const initFormData = {
   id: undefined,
   memberNo: undefined,
@@ -321,6 +347,12 @@ const handleBirthday = async () => {
 };
 
 onMounted(() => {
+  loadLevelOptions();
   getList();
 });
+
+const loadLevelOptions = async () => {
+  const res = await listNailMemberLevel({ pageNum: 1, pageSize: 500 });
+  levelOptions.value = res.rows || [];
+};
 </script>
