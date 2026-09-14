@@ -14,7 +14,9 @@
               <el-input v-model="queryParams.phone" placeholder="请输入手机号" clearable @keyup.enter="handleQuery" />
             </el-form-item>
             <el-form-item label="性别" prop="sex">
-              <el-input v-model="queryParams.sex" placeholder="请输入性别" clearable @keyup.enter="handleQuery" />
+              <el-select v-model="queryParams.sex" placeholder="请选择性别" clearable>
+                <el-option v-for="dict in sys_user_sex" :key="dict.value" :label="dict.label" :value="dict.value" />
+              </el-select>
             </el-form-item>
             <el-form-item label="来源" prop="source">
               <el-input v-model="queryParams.source" placeholder="请输入来源" clearable @keyup.enter="handleQuery" />
@@ -64,7 +66,11 @@
         <el-table-column label="会员编号" align="center" prop="memberNo" show-overflow-tooltip />
         <el-table-column label="姓名" align="center" prop="name" show-overflow-tooltip />
         <el-table-column label="手机号" align="center" prop="phone" show-overflow-tooltip />
-        <el-table-column label="性别" align="center" prop="sex" show-overflow-tooltip />
+        <el-table-column label="性别" align="center" prop="sex" width="80">
+          <template #default="scope">
+            <dict-tag :options="sys_user_sex" :value="scope.row.sex" />
+          </template>
+        </el-table-column>
         <el-table-column label="生日" align="center" prop="birthday" width="160" />
         <el-table-column label="会员等级" align="center" prop="levelId" show-overflow-tooltip />
         <el-table-column label="积分" align="center" prop="point" show-overflow-tooltip />
@@ -107,7 +113,9 @@
           <el-input v-model="form.phone" placeholder="请输入手机号" />
         </el-form-item>
         <el-form-item label="性别" prop="sex">
-          <el-input v-model="form.sex" placeholder="请输入性别" />
+          <el-select v-model="form.sex" placeholder="请选择性别">
+            <el-option v-for="dict in sys_user_sex" :key="dict.value" :label="dict.label" :value="dict.value" />
+          </el-select>
         </el-form-item>
         <el-form-item label="生日" prop="birthday">
           <el-date-picker v-model="form.birthday" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择生日" />
@@ -179,12 +187,13 @@ import { NailMemberVO, NailMemberQuery, NailMemberForm } from '@/api/member/memb
 import { rechargeMember, birthdayMember } from '@/api/member/member';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
-const { sys_normal_disable } = toRefs<any>(proxy?.useDict('sys_normal_disable'));
+const { sys_normal_disable, sys_user_sex } = toRefs<any>(proxy?.useDict('sys_normal_disable', 'sys_user_sex'));
 const dataList = ref([] as any[]);
 const buttonLoading = ref(false);
 const loading = ref(true);
 const showSearch = ref(true);
 const ids = ref<Array<string | number>>([]);
+const memberNos = ref<string[]>([]);
 const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
@@ -246,6 +255,7 @@ const resetQuery = () => {
 };
 const handleSelectionChange = (selection: NailMemberVO[]) => {
   ids.value = selection.map((item) => item.id!);
+  memberNos.value = selection.map((item) => item.memberNo!).filter(Boolean);
   single.value = selection.length !== 1;
   multiple.value = !selection.length;
 };
@@ -279,7 +289,8 @@ const submitForm = () => {
 };
 const handleDelete = async (row?: NailMemberVO) => {
   const _ids = row?.id || ids.value;
-  await proxy?.$modal.confirm('是否确认删除会员编号为"' + _ids + '"的数据项？');
+  const _memberNos = row?.memberNo || memberNos.value.join('、');
+  await proxy?.$modal.confirm('是否确认删除会员编号为"' + _memberNos + '"的数据项？');
   await delNailMember(_ids);
   await getList();
   proxy?.$modal.msgSuccess('删除成功');
