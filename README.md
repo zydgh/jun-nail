@@ -19,7 +19,15 @@
 
 ## 本地启动
 
-依赖：JDK 17 或 21、Maven 3.8+、Node.js 20+、MySQL 8、Redis（密码 `ruoyi123`）。
+依赖：JDK 17 或 21、Maven 3.8+、Node.js 20+、MySQL 8、Redis（密码 `ruoyi123`）、MinIO。
+
+一键拉起（推荐，环境重置后可恢复）：
+
+```bash
+bash script/bin/start-dev.sh
+```
+
+或按步骤启动：
 
 ```bash
 # 1. 初始化数据库
@@ -31,11 +39,14 @@ mysql -uroot -proot ry-vue < script/sql/nail_business.sql
 # 2. 启动 Redis（需密码 ruoyi123）
 redis-server --requirepass ruoyi123
 
-# 3. 启动后端（默认端口 18080）
+# 3. 启动 MinIO
+bash script/bin/start-minio.sh
+
+# 4. 启动后端（默认端口 18080）
 mvn -pl ruoyi-admin -am -DskipTests package
 java -jar ruoyi-admin/target/ruoyi-admin.jar --spring.profiles.active=dev
 
-# 4. 启动前端（默认端口 18418）
+# 5. 启动前端（默认端口 18418）
 cd plus-ui
 npm install
 npm run dev
