@@ -112,8 +112,8 @@
     </el-card>
     <el-dialog v-model="dialog.visible" :title="dialog.title" width="640px" append-to-body>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
-        <el-form-item label="会员编号" prop="memberNo">
-          <el-input v-model="form.memberNo" placeholder="请输入会员编号" />
+        <el-form-item v-if="form.id" label="会员编号" prop="memberNo">
+          <el-input v-model="form.memberNo" disabled />
         </el-form-item>
         <el-form-item label="姓名" prop="name">
           <el-input v-model="form.name" placeholder="请输入姓名" />
