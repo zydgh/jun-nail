@@ -18,6 +18,28 @@ ensure_docker_cli() {
   fi
 }
 
+mysql_exec() {
+  if command -v mysql >/dev/null 2>&1; then
+    mysql -h127.0.0.1 -uroot -proot --default-character-set=utf8mb4 "$@"
+  else
+    ensure_docker_cli
+    if [[ -t 0 ]]; then
+      docker exec junjun-mysql mysql -uroot -proot --default-character-set=utf8mb4 "$@"
+    else
+      docker exec -i junjun-mysql mysql -uroot -proot --default-character-set=utf8mb4 "$@"
+    fi
+  fi
+}
+
+mysql_ping() {
+  if command -v mysql >/dev/null 2>&1; then
+    mysql -h127.0.0.1 -uroot -proot -e "SELECT 1" >/dev/null 2>&1
+  else
+    ensure_docker_cli
+    docker exec junjun-mysql mysqladmin -uroot -proot ping >/dev/null 2>&1
+  fi
+}
+
 ensure_mysql_redis() {
   ensure_docker_cli
   if ! docker ps --format '{{.Names}}' | grep -qx junjun-redis; then
@@ -38,19 +60,19 @@ ensure_mysql_redis() {
       --lower_case_table_names=1
   fi
   for i in $(seq 1 60); do
-    if mysql -h127.0.0.1 -uroot -proot -e "SELECT 1" >/dev/null 2>&1; then
+    if mysql_ping; then
       break
     fi
     sleep 2
   done
   local tables
-  tables="$(mysql -h127.0.0.1 -uroot -proot -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='ry-vue';" 2>/dev/null || echo 0)"
+  tables="$(mysql_exec -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='ry-vue';" 2>/dev/null | tr -d '\r' || echo 0)"
   if [[ "${tables}" -lt 10 ]]; then
     echo "Importing SQL..."
-    mysql -h127.0.0.1 -uroot -proot ry-vue < "${ROOT_DIR}/script/sql/ry_vue_5.X.sql"
-    mysql -h127.0.0.1 -uroot -proot ry-vue < "${ROOT_DIR}/script/sql/ry_workflow.sql"
-    mysql -h127.0.0.1 -uroot -proot ry-vue < "${ROOT_DIR}/script/sql/nail_business.sql"
-    mysql -h127.0.0.1 -uroot -proot ry-vue < "${ROOT_DIR}/script/sql/fix_oss_minio.sql"
+    mysql_exec ry-vue < "${ROOT_DIR}/script/sql/ry_vue_5.X.sql"
+    mysql_exec ry-vue < "${ROOT_DIR}/script/sql/ry_workflow.sql"
+    mysql_exec ry-vue < "${ROOT_DIR}/script/sql/nail_business.sql"
+    mysql_exec ry-vue < "${ROOT_DIR}/script/sql/fix_oss_minio.sql"
   fi
 }
 
