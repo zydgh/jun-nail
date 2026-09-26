@@ -115,8 +115,8 @@
     </el-card>
     <el-dialog v-model="dialog.visible" :title="dialog.title" width="640px" append-to-body>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
-        <el-form-item label="预约单号" prop="appointNo">
-          <el-input v-model="form.appointNo" placeholder="请输入预约单号" />
+        <el-form-item v-if="form.id" label="预约单号" prop="appointNo">
+          <el-input v-model="form.appointNo" disabled />
         </el-form-item>
         <el-form-item label="会员" prop="memberId">
           <el-select v-model="form.memberId" placeholder="请选择会员" clearable filterable style="width: 100%">

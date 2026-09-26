@@ -84,6 +84,10 @@ public class NailAppointmentServiceImpl implements INailAppointmentService {
     @Override
     public Boolean updateByBo(NailAppointmentBo bo) {
         NailAppointment update = MapstructUtils.convert(bo, NailAppointment.class);
+        NailAppointmentVo exist = baseMapper.selectVoById(bo.getId());
+        if (exist != null) {
+            update.setAppointNo(exist.getAppointNo());
+        }
         return baseMapper.updateById(update) > 0;
     }
 
