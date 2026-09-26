@@ -39,9 +39,8 @@ public class NailAppointmentBo extends BaseEntity {
     private Long memberId;
 
     /**
-     * 美甲师ID
+     * 美甲师ID，可空；有值时同一时段只能服务一位顾客
      */
-    @NotNull(message = "美甲师不能为空", groups = { AddGroup.class, EditGroup.class })
     private Long employeeId;
 
     /**

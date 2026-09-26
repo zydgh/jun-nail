@@ -141,7 +141,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="美甲师" prop="employeeId">
-          <el-select v-model="form.employeeId" placeholder="请选择美甲师" clearable filterable style="width: 100%">
+          <el-select v-model="form.employeeId" placeholder="请选择美甲师，可不选" clearable filterable style="width: 100%">
             <el-option
               v-for="item in enabledEmployeeOptions"
               :key="item.id"
@@ -249,7 +249,6 @@ const data = reactive({
   } as NailAppointmentQuery,
   rules: {
   memberId: [{ required: true, message: '会员不能为空', trigger: 'change' }],
-  employeeId: [{ required: true, message: '美甲师不能为空', trigger: 'change' }],
   appointTime: [{ required: true, message: '预约时间不能为空', trigger: 'blur' }],
   }
 });

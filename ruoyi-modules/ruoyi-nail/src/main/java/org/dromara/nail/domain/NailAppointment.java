@@ -1,5 +1,7 @@
 package org.dromara.nail.domain;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -41,6 +43,7 @@ public class NailAppointment extends TenantEntity {
     /**
      * 美甲师ID
      */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Long employeeId;
 
     /**
