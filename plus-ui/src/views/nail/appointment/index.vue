@@ -7,6 +7,26 @@
             <el-form-item label="预约单号" prop="appointNo">
               <el-input v-model="queryParams.appointNo" placeholder="请输入预约单号" clearable @keyup.enter="handleQuery" />
             </el-form-item>
+            <el-form-item label="门店" prop="storeId">
+              <el-select v-model="queryParams.storeId" placeholder="请选择门店" clearable filterable>
+                <el-option v-for="item in storeOptions" :key="item.id" :label="item.storeName" :value="item.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="美甲师" prop="employeeId">
+              <el-select v-model="queryParams.employeeId" placeholder="请选择美甲师" clearable filterable>
+                <el-option
+                  v-for="item in employeeOptions"
+                  :key="item.id"
+                  :label="employeeLabel(item)"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="项目" prop="itemId">
+              <el-select v-model="queryParams.itemId" placeholder="请选择项目" clearable filterable>
+                <el-option v-for="item in itemOptions" :key="item.id" :label="item.itemName" :value="item.id" />
+              </el-select>
+            </el-form-item>
             <el-form-item label="预约状态" prop="status">
               <el-select v-model="queryParams.status" placeholder="预约状态" clearable>
                 <el-option v-for="dict in sys_normal_disable" :key="dict.value" :label="dict.label" :value="dict.value" />
@@ -43,9 +63,21 @@
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column label="预约单号" align="center" prop="appointNo" show-overflow-tooltip />
         <el-table-column label="会员ID" align="center" prop="memberId" show-overflow-tooltip />
-        <el-table-column label="美甲师ID" align="center" prop="employeeId" show-overflow-tooltip />
-        <el-table-column label="门店ID" align="center" prop="storeId" show-overflow-tooltip />
-        <el-table-column label="项目ID" align="center" prop="itemId" show-overflow-tooltip />
+        <el-table-column label="门店" align="center" prop="storeId" show-overflow-tooltip>
+          <template #default="scope">
+            {{ storeNameMap[String(scope.row.storeId)] || scope.row.storeId || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="美甲师" align="center" prop="employeeId" show-overflow-tooltip>
+          <template #default="scope">
+            {{ employeeNameMap[String(scope.row.employeeId)] || scope.row.employeeId || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="项目" align="center" prop="itemId" show-overflow-tooltip>
+          <template #default="scope">
+            {{ itemNameMap[String(scope.row.itemId)] || scope.row.itemId || '-' }}
+          </template>
+        </el-table-column>
         <el-table-column label="预约时间" align="center" prop="appointTime" width="160" />
         <el-table-column label="时长(分钟)" align="center" prop="durationMin" show-overflow-tooltip />
         <el-table-column label="预约状态" align="center" prop="status">
@@ -75,14 +107,44 @@
         <el-form-item label="会员ID" prop="memberId">
           <el-input v-model="form.memberId" placeholder="请输入会员ID" />
         </el-form-item>
-        <el-form-item label="美甲师ID" prop="employeeId">
-          <el-input v-model="form.employeeId" placeholder="请输入美甲师ID" />
+        <el-form-item label="门店" prop="storeId">
+          <el-select
+            v-model="form.storeId"
+            placeholder="请选择门店"
+            clearable
+            filterable
+            style="width: 100%"
+            @change="handleStoreChange"
+          >
+            <el-option v-for="item in enabledStoreOptions" :key="item.id" :label="item.storeName" :value="item.id" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="门店ID" prop="storeId">
-          <el-input v-model="form.storeId" placeholder="请输入门店ID" />
+        <el-form-item label="美甲师" prop="employeeId">
+          <el-select v-model="form.employeeId" placeholder="请选择美甲师" clearable filterable style="width: 100%">
+            <el-option
+              v-for="item in enabledEmployeeOptions"
+              :key="item.id"
+              :label="employeeLabel(item)"
+              :value="item.id"
+            />
+          </el-select>
         </el-form-item>
-        <el-form-item label="项目ID" prop="itemId">
-          <el-input v-model="form.itemId" placeholder="请输入项目ID" />
+        <el-form-item label="项目" prop="itemId">
+          <el-select
+            v-model="form.itemId"
+            placeholder="请选择项目"
+            clearable
+            filterable
+            style="width: 100%"
+            @change="handleItemChange"
+          >
+            <el-option
+              v-for="item in enabledItemOptions"
+              :key="item.id"
+              :label="itemLabel(item)"
+              :value="item.id"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="预约时间" prop="appointTime">
           <el-date-picker v-model="form.appointTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择预约时间" />
@@ -113,10 +175,19 @@
 <script setup name="NailAppointment" lang="ts">
 import { listNailAppointment, getNailAppointment, delNailAppointment, addNailAppointment, updateNailAppointment } from '@/api/nail/appointment';
 import { NailAppointmentVO, NailAppointmentQuery, NailAppointmentForm } from '@/api/nail/appointment/types';
+import { listNailStore } from '@/api/store/store';
+import { NailStoreVO } from '@/api/store/store/types';
+import { listNailEmployee } from '@/api/employee/employee';
+import { NailEmployeeVO } from '@/api/employee/employee/types';
+import { listNailServiceItem } from '@/api/nail/item';
+import { NailServiceItemVO } from '@/api/nail/item/types';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const { sys_normal_disable } = toRefs<any>(proxy?.useDict('sys_normal_disable'));
 const dataList = ref([] as any[]);
+const storeOptions = ref<NailStoreVO[]>([]);
+const employeeOptions = ref<NailEmployeeVO[]>([]);
+const itemOptions = ref<NailServiceItemVO[]>([]);
 const buttonLoading = ref(false);
 const loading = ref(true);
 const showSearch = ref(true);
@@ -142,13 +213,110 @@ const initFormData = {
 };
 const data = reactive({
   form: { ...initFormData },
-  queryParams: { pageNum: 1, pageSize: 10 },
+  queryParams: {
+    pageNum: 1,
+    pageSize: 10,
+    appointNo: undefined,
+    storeId: undefined,
+    employeeId: undefined,
+    itemId: undefined,
+    status: undefined
+  } as NailAppointmentQuery,
   rules: {
   memberId: [{ required: true, message: '会员ID不能为空', trigger: 'blur' }],
   appointTime: [{ required: true, message: '预约时间不能为空', trigger: 'blur' }],
   }
 });
 const { queryParams, form, rules } = toRefs(data);
+
+const isEnabled = (status?: string) => status === '0' || status == null || status === '';
+
+const enabledStoreOptions = computed(() => storeOptions.value.filter((item) => isEnabled(item.status)));
+const enabledItemOptions = computed(() => itemOptions.value.filter((item) => isEnabled(item.status)));
+const enabledEmployeeOptions = computed(() =>
+  employeeOptions.value.filter((item) => {
+    if (!isEnabled(item.status)) {
+      return false;
+    }
+    if (form.value.storeId == null || form.value.storeId === '') {
+      return true;
+    }
+    return item.storeId == null || String(item.storeId) === String(form.value.storeId);
+  })
+);
+
+const storeNameMap = computed(() => {
+  const map: Record<string, string> = {};
+  storeOptions.value.forEach((item) => {
+    if (item.id != null) {
+      map[String(item.id)] = item.storeName || '';
+    }
+  });
+  return map;
+});
+const employeeNameMap = computed(() => {
+  const map: Record<string, string> = {};
+  employeeOptions.value.forEach((item) => {
+    if (item.id != null) {
+      map[String(item.id)] = item.name || '';
+    }
+  });
+  return map;
+});
+const itemNameMap = computed(() => {
+  const map: Record<string, string> = {};
+  itemOptions.value.forEach((item) => {
+    if (item.id != null) {
+      map[String(item.id)] = item.itemName || '';
+    }
+  });
+  return map;
+});
+
+const employeeLabel = (item: NailEmployeeVO) => {
+  if (item.employeeNo) {
+    return `${item.name || ''}（${item.employeeNo}）`;
+  }
+  return item.name || String(item.id ?? '');
+};
+const itemLabel = (item: NailServiceItemVO) => {
+  if (item.durationMin != null && item.durationMin !== '') {
+    return `${item.itemName || ''}（${item.durationMin}分钟）`;
+  }
+  return item.itemName || String(item.id ?? '');
+};
+
+const loadSelectOptions = async () => {
+  const [storeRes, employeeRes, itemRes] = await Promise.all([
+    listNailStore({ pageNum: 1, pageSize: 500 }),
+    listNailEmployee({ pageNum: 1, pageSize: 500 }),
+    listNailServiceItem({ pageNum: 1, pageSize: 500 })
+  ]);
+  storeOptions.value = storeRes.rows || [];
+  employeeOptions.value = employeeRes.rows || [];
+  itemOptions.value = itemRes.rows || [];
+};
+
+const handleStoreChange = () => {
+  if (form.value.employeeId == null || form.value.employeeId === '') {
+    return;
+  }
+  const matched = enabledEmployeeOptions.value.some((item) => String(item.id) === String(form.value.employeeId));
+  if (!matched) {
+    form.value.employeeId = undefined;
+  }
+};
+
+const handleItemChange = (itemId?: string | number) => {
+  if (itemId == null || itemId === '') {
+    return;
+  }
+  const item = itemOptions.value.find((row) => String(row.id) === String(itemId));
+  if (item?.durationMin != null && item.durationMin !== '') {
+    form.value.durationMin = item.durationMin;
+  }
+};
+
 const getList = async () => {
   loading.value = true;
   const res = await listNailAppointment(queryParams.value);
@@ -216,7 +384,8 @@ const handleExport = () => {
   proxy?.download('nail/appointment/export', { ...queryParams.value }, `nail_appointment_${new Date().getTime()}.xlsx`);
 };
 
-onMounted(() => {
+onMounted(async () => {
+  await loadSelectOptions();
   getList();
 });
 </script>
