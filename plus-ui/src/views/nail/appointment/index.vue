@@ -39,7 +39,7 @@
             </el-form-item>
             <el-form-item label="预约状态" prop="status">
               <el-select v-model="queryParams.status" placeholder="预约状态" clearable>
-                <el-option v-for="dict in sys_normal_disable" :key="dict.value" :label="dict.label" :value="dict.value" />
+                <el-option v-for="dict in nail_appoint_status" :key="dict.value" :label="dict.label" :value="dict.value" />
               </el-select>
             </el-form-item>
             <el-form-item>
@@ -96,7 +96,7 @@
         <el-table-column label="时长(分钟)" align="center" prop="durationMin" show-overflow-tooltip />
         <el-table-column label="预约状态" align="center" prop="status">
           <template #default="scope">
-            <dict-tag :options="sys_normal_disable" :value="scope.row.status" />
+            <dict-tag :options="nail_appoint_status" :value="scope.row.status" />
           </template>
         </el-table-column>
         <el-table-column label="备注" align="center" prop="remark" show-overflow-tooltip />
@@ -175,7 +175,7 @@
         </el-form-item>
         <el-form-item label="预约状态" prop="status">
           <el-radio-group v-model="form.status">
-            <el-radio v-for="dict in sys_normal_disable" :key="dict.value" :value="dict.value">{{ dict.label }}</el-radio>
+            <el-radio v-for="dict in nail_appoint_status" :key="dict.value" :value="dict.value">{{ dict.label }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="备注" prop="remark">
@@ -206,7 +206,7 @@ import { listNailMember } from '@/api/member/member';
 import { NailMemberVO } from '@/api/member/member/types';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
-const { sys_normal_disable } = toRefs<any>(proxy?.useDict('sys_normal_disable'));
+const { nail_appoint_status } = toRefs<any>(proxy?.useDict('nail_appoint_status'));
 const dataList = ref([] as any[]);
 const memberOptions = ref<NailMemberVO[]>([]);
 const storeOptions = ref<NailStoreVO[]>([]);
@@ -231,7 +231,7 @@ const initFormData = {
   itemId: undefined,
   appointTime: undefined,
   durationMin: undefined,
-  status: undefined,
+  status: '0',
   remark: undefined
 
 };
@@ -249,6 +249,7 @@ const data = reactive({
   } as NailAppointmentQuery,
   rules: {
   memberId: [{ required: true, message: '会员不能为空', trigger: 'change' }],
+  employeeId: [{ required: true, message: '美甲师不能为空', trigger: 'change' }],
   appointTime: [{ required: true, message: '预约时间不能为空', trigger: 'blur' }],
   }
 });

@@ -41,6 +41,7 @@ public class NailAppointmentBo extends BaseEntity {
     /**
      * 美甲师ID
      */
+    @NotNull(message = "美甲师不能为空", groups = { AddGroup.class, EditGroup.class })
     private Long employeeId;
 
     /**
