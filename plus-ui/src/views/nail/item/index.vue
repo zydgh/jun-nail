@@ -75,8 +75,8 @@
     </el-card>
     <el-dialog v-model="dialog.visible" :title="dialog.title" width="640px" append-to-body>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
-        <el-form-item label="项目编号" prop="itemCode">
-          <el-input v-model="form.itemCode" placeholder="请输入项目编号" />
+        <el-form-item v-if="form.id" label="项目编号" prop="itemCode">
+          <el-input v-model="form.itemCode" disabled />
         </el-form-item>
         <el-form-item label="项目名称" prop="itemName">
           <el-input v-model="form.itemName" placeholder="请输入项目名称" />

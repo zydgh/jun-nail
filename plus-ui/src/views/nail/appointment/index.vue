@@ -7,6 +7,16 @@
             <el-form-item label="预约单号" prop="appointNo">
               <el-input v-model="queryParams.appointNo" placeholder="请输入预约单号" clearable @keyup.enter="handleQuery" />
             </el-form-item>
+            <el-form-item label="会员" prop="memberId">
+              <el-select v-model="queryParams.memberId" placeholder="请选择会员" clearable filterable>
+                <el-option
+                  v-for="item in memberOptions"
+                  :key="item.id"
+                  :label="memberLabel(item)"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
             <el-form-item label="门店" prop="storeId">
               <el-select v-model="queryParams.storeId" placeholder="请选择门店" clearable filterable>
                 <el-option v-for="item in storeOptions" :key="item.id" :label="item.storeName" :value="item.id" />
@@ -62,7 +72,11 @@
       <el-table v-loading="loading" border :data="dataList" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column label="预约单号" align="center" prop="appointNo" show-overflow-tooltip />
-        <el-table-column label="会员ID" align="center" prop="memberId" show-overflow-tooltip />
+        <el-table-column label="会员" align="center" prop="memberId" show-overflow-tooltip>
+          <template #default="scope">
+            {{ memberNameMap[String(scope.row.memberId)] || scope.row.memberId || '-' }}
+          </template>
+        </el-table-column>
         <el-table-column label="门店" align="center" prop="storeId" show-overflow-tooltip>
           <template #default="scope">
             {{ storeNameMap[String(scope.row.storeId)] || scope.row.storeId || '-' }}
@@ -104,8 +118,15 @@
         <el-form-item label="预约单号" prop="appointNo">
           <el-input v-model="form.appointNo" placeholder="请输入预约单号" />
         </el-form-item>
-        <el-form-item label="会员ID" prop="memberId">
-          <el-input v-model="form.memberId" placeholder="请输入会员ID" />
+        <el-form-item label="会员" prop="memberId">
+          <el-select v-model="form.memberId" placeholder="请选择会员" clearable filterable style="width: 100%">
+            <el-option
+              v-for="item in enabledMemberOptions"
+              :key="item.id"
+              :label="memberLabel(item)"
+              :value="item.id"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="门店" prop="storeId">
           <el-select
@@ -181,10 +202,13 @@ import { listNailEmployee } from '@/api/employee/employee';
 import { NailEmployeeVO } from '@/api/employee/employee/types';
 import { listNailServiceItem } from '@/api/nail/item';
 import { NailServiceItemVO } from '@/api/nail/item/types';
+import { listNailMember } from '@/api/member/member';
+import { NailMemberVO } from '@/api/member/member/types';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const { sys_normal_disable } = toRefs<any>(proxy?.useDict('sys_normal_disable'));
 const dataList = ref([] as any[]);
+const memberOptions = ref<NailMemberVO[]>([]);
 const storeOptions = ref<NailStoreVO[]>([]);
 const employeeOptions = ref<NailEmployeeVO[]>([]);
 const itemOptions = ref<NailServiceItemVO[]>([]);
@@ -217,13 +241,14 @@ const data = reactive({
     pageNum: 1,
     pageSize: 10,
     appointNo: undefined,
+    memberId: undefined,
     storeId: undefined,
     employeeId: undefined,
     itemId: undefined,
     status: undefined
   } as NailAppointmentQuery,
   rules: {
-  memberId: [{ required: true, message: '会员ID不能为空', trigger: 'blur' }],
+  memberId: [{ required: true, message: '会员不能为空', trigger: 'change' }],
   appointTime: [{ required: true, message: '预约时间不能为空', trigger: 'blur' }],
   }
 });
@@ -231,6 +256,7 @@ const { queryParams, form, rules } = toRefs(data);
 
 const isEnabled = (status?: string) => status === '0' || status == null || status === '';
 
+const enabledMemberOptions = computed(() => memberOptions.value.filter((item) => isEnabled(item.status)));
 const enabledStoreOptions = computed(() => storeOptions.value.filter((item) => isEnabled(item.status)));
 const enabledItemOptions = computed(() => itemOptions.value.filter((item) => isEnabled(item.status)));
 const enabledEmployeeOptions = computed(() =>
@@ -245,6 +271,15 @@ const enabledEmployeeOptions = computed(() =>
   })
 );
 
+const memberNameMap = computed(() => {
+  const map: Record<string, string> = {};
+  memberOptions.value.forEach((item) => {
+    if (item.id != null) {
+      map[String(item.id)] = item.name || item.memberNo || '';
+    }
+  });
+  return map;
+});
 const storeNameMap = computed(() => {
   const map: Record<string, string> = {};
   storeOptions.value.forEach((item) => {
@@ -273,6 +308,18 @@ const itemNameMap = computed(() => {
   return map;
 });
 
+const memberLabel = (item: NailMemberVO) => {
+  const name = item.name || '';
+  const phone = item.phone || '';
+  const memberNo = item.memberNo || '';
+  if (name && phone) {
+    return `${name}（${phone}）`;
+  }
+  if (name && memberNo) {
+    return `${name}（${memberNo}）`;
+  }
+  return name || memberNo || phone || String(item.id ?? '');
+};
 const employeeLabel = (item: NailEmployeeVO) => {
   if (item.employeeNo) {
     return `${item.name || ''}（${item.employeeNo}）`;
@@ -287,11 +334,13 @@ const itemLabel = (item: NailServiceItemVO) => {
 };
 
 const loadSelectOptions = async () => {
-  const [storeRes, employeeRes, itemRes] = await Promise.all([
+  const [memberRes, storeRes, employeeRes, itemRes] = await Promise.all([
+    listNailMember({ pageNum: 1, pageSize: 500 }),
     listNailStore({ pageNum: 1, pageSize: 500 }),
     listNailEmployee({ pageNum: 1, pageSize: 500 }),
     listNailServiceItem({ pageNum: 1, pageSize: 500 })
   ]);
+  memberOptions.value = memberRes.rows || [];
   storeOptions.value = storeRes.rows || [];
   employeeOptions.value = employeeRes.rows || [];
   itemOptions.value = itemRes.rows || [];
