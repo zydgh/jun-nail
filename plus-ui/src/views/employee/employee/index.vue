@@ -18,6 +18,11 @@
                 <el-option v-for="dict in sys_user_sex" :key="dict.value" :label="dict.label" :value="dict.value" />
               </el-select>
             </el-form-item>
+            <el-form-item label="所属门店" prop="storeId">
+              <el-select v-model="queryParams.storeId" placeholder="请选择门店" clearable filterable>
+                <el-option v-for="item in storeOptions" :key="item.id" :label="item.storeName" :value="item.id" />
+              </el-select>
+            </el-form-item>
             <el-form-item label="职位" prop="position">
               <el-input v-model="queryParams.position" placeholder="请输入职位" clearable @keyup.enter="handleQuery" />
             </el-form-item>
@@ -71,7 +76,11 @@
             <image-preview :src="scope.row.avatarUrl" :width="50" :height="50" />
           </template>
         </el-table-column>
-        <el-table-column label="所属门店" align="center" prop="storeId" show-overflow-tooltip />
+        <el-table-column label="所属门店" align="center" prop="storeId" show-overflow-tooltip>
+          <template #default="scope">
+            {{ storeNameMap[String(scope.row.storeId)] || scope.row.storeId || '-' }}
+          </template>
+        </el-table-column>
         <el-table-column label="职位" align="center" prop="position" show-overflow-tooltip />
         <el-table-column label="等级" align="center" prop="grade" show-overflow-tooltip />
         <el-table-column label="提成比例" align="center" prop="commissionRate" show-overflow-tooltip />
@@ -117,7 +126,9 @@
           <image-upload v-model="form.avatar" :limit="1" />
         </el-form-item>
         <el-form-item label="所属门店" prop="storeId">
-          <el-input v-model="form.storeId" placeholder="请输入所属门店" />
+          <el-select v-model="form.storeId" placeholder="请选择门店" clearable filterable style="width: 100%">
+            <el-option v-for="item in enabledStoreOptions" :key="item.id" :label="item.storeName" :value="item.id" />
+          </el-select>
         </el-form-item>
         <el-form-item label="职位" prop="position">
           <el-input v-model="form.position" placeholder="请输入职位" />
@@ -160,10 +171,13 @@
 <script setup name="NailEmployee" lang="ts">
 import { listNailEmployee, getNailEmployee, delNailEmployee, addNailEmployee, updateNailEmployee } from '@/api/employee/employee';
 import { NailEmployeeVO, NailEmployeeQuery, NailEmployeeForm } from '@/api/employee/employee/types';
+import { listNailStore } from '@/api/store/store';
+import { NailStoreVO } from '@/api/store/store/types';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const { sys_normal_disable, sys_user_sex } = toRefs<any>(proxy?.useDict('sys_normal_disable', 'sys_user_sex'));
 const dataList = ref([] as any[]);
+const storeOptions = ref<NailStoreVO[]>([]);
 const buttonLoading = ref(false);
 const loading = ref(true);
 const showSearch = ref(true);
@@ -195,13 +209,42 @@ const initFormData = {
 };
 const data = reactive({
   form: { ...initFormData },
-  queryParams: { pageNum: 1, pageSize: 10 },
+  queryParams: {
+    pageNum: 1,
+    pageSize: 10,
+    employeeNo: undefined,
+    name: undefined,
+    phone: undefined,
+    sex: undefined,
+    storeId: undefined,
+    position: undefined,
+    grade: undefined,
+    status: undefined
+  } as NailEmployeeQuery,
   rules: {
   name: [{ required: true, message: '姓名不能为空', trigger: 'blur' }],
   phone: [{ required: true, message: '手机号不能为空', trigger: 'blur' }],
   }
 });
 const { queryParams, form, rules } = toRefs(data);
+
+const isEnabled = (status?: string) => status === '0' || status == null || status === '';
+const enabledStoreOptions = computed(() => storeOptions.value.filter((item) => isEnabled(item.status)));
+const storeNameMap = computed(() => {
+  const map: Record<string, string> = {};
+  storeOptions.value.forEach((item) => {
+    if (item.id != null) {
+      map[String(item.id)] = item.storeName || '';
+    }
+  });
+  return map;
+});
+
+const loadStoreOptions = async () => {
+  const res = await listNailStore({ pageNum: 1, pageSize: 500 });
+  storeOptions.value = res.rows || [];
+};
+
 const getList = async () => {
   loading.value = true;
   const res = await listNailEmployee(queryParams.value);
@@ -271,7 +314,8 @@ const handleExport = () => {
   proxy?.download('employee/employee/export', { ...queryParams.value }, `nail_employee_${new Date().getTime()}.xlsx`);
 };
 
-onMounted(() => {
+onMounted(async () => {
+  await loadStoreOptions();
   getList();
 });
 </script>
