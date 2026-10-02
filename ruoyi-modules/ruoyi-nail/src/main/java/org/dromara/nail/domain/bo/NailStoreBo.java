@@ -29,7 +29,6 @@ public class NailStoreBo extends BaseEntity {
     /**
      * 门店编号
      */
-    @NotBlank(message = "门店编号不能为空", groups = { AddGroup.class, EditGroup.class })
     private String storeCode;
 
     /**

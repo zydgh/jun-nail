@@ -82,6 +82,10 @@ public class NailStoreServiceImpl implements INailStoreService {
     @Override
     public Boolean updateByBo(NailStoreBo bo) {
         NailStore update = MapstructUtils.convert(bo, NailStore.class);
+        NailStoreVo exist = baseMapper.selectVoById(bo.getId());
+        if (exist != null) {
+            update.setStoreCode(exist.getStoreCode());
+        }
         return baseMapper.updateById(update) > 0;
     }
 

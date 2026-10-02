@@ -77,8 +77,8 @@
     </el-card>
     <el-dialog v-model="dialog.visible" :title="dialog.title" width="640px" append-to-body>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
-        <el-form-item label="门店编号" prop="storeCode">
-          <el-input v-model="form.storeCode" placeholder="请输入门店编号" />
+        <el-form-item v-if="form.id" label="门店编号" prop="storeCode">
+          <el-input v-model="form.storeCode" disabled />
         </el-form-item>
         <el-form-item label="门店名称" prop="storeName">
           <el-input v-model="form.storeName" placeholder="请输入门店名称" />
@@ -148,7 +148,6 @@ const data = reactive({
   form: { ...initFormData },
   queryParams: { pageNum: 1, pageSize: 10 },
   rules: {
-  storeCode: [{ required: true, message: '门店编号不能为空', trigger: 'blur' }],
   storeName: [{ required: true, message: '门店名称不能为空', trigger: 'blur' }],
   }
 });
