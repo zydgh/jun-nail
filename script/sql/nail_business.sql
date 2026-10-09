@@ -226,6 +226,32 @@ create table nail_employee_shift (
 ) engine=innodb default charset=utf8mb4 collate=utf8mb4_general_ci comment='员工排班表';
 create index idx_nail_shift_emp on nail_employee_shift(employee_id, shift_date);
 
+drop table if exists nail_employee_performance;
+create table nail_employee_performance (
+  id bigint(20) not null comment '主键',
+  employee_id bigint(20) not null comment '员工ID',
+  store_id bigint(20) default null comment '门店ID',
+  amount decimal(10,2) not null default 0.00 comment '业绩金额',
+  item_id bigint(20) default null comment '项目ID',
+  item_name varchar(64) default null comment '项目名称',
+  customer_name varchar(64) default null comment '客户姓名',
+  customer_phone varchar(20) default null comment '客户手机号',
+  consume_time datetime not null comment '消费时间',
+  praise char(1) default '0' comment '是否好评（0否 1是）',
+
+  tenant_id varchar(20) default '000000' comment '租户编号',
+  create_dept bigint(20) default null comment '创建部门',
+  create_by bigint(20) default null comment '创建者',
+  create_time datetime default null comment '创建时间',
+  update_by bigint(20) default null comment '更新者',
+  update_time datetime default null comment '更新时间',
+  del_flag char(1) default '0' comment '删除标志（0正常 1删除）',
+  remark varchar(500) default null comment '备注',
+  primary key (id)
+) engine=innodb default charset=utf8mb4 collate=utf8mb4_general_ci comment='员工业绩表';
+create index idx_nail_performance_emp_time on nail_employee_performance(employee_id, consume_time);
+create index idx_nail_performance_store_time on nail_employee_performance(store_id, consume_time);
+
 drop table if exists nail_service_item;
 create table nail_service_item (
   id bigint(20) not null comment '主键',
@@ -360,6 +386,7 @@ insert into sys_menu values('2112', '余额记录', '2100', '3', 'balance', 'mem
 insert into sys_menu values('2113', '积分记录', '2100', '4', 'point', 'member/pointLog/index', '', 1, 0, 'C', '0', '0', 'member:point:list', 'chart', 103, 1, sysdate(), null, null, '积分记录');
 insert into sys_menu values('2120', '员工列表', '2101', '1', 'list', 'employee/employee/index', '', 1, 0, 'C', '0', '0', 'employee:employee:list', 'peoples', 103, 1, sysdate(), null, null, '员工列表');
 insert into sys_menu values('2121', '员工排班', '2101', '2', 'shift', 'employee/shift/index', '', 1, 0, 'C', '0', '0', 'employee:shift:list', 'date', 103, 1, sysdate(), null, null, '员工排班');
+insert into sys_menu values('2122', '员工业绩', '2101', '3', 'performance', 'employee/performance/index', '', 1, 0, 'C', '0', '0', 'employee:performance:list', 'trophy', 103, 1, sysdate(), null, null, '员工业绩与排行榜');
 insert into sys_menu values('2130', '门店管理', '2102', '1', 'store', 'store/store/index', '', 1, 0, 'C', '0', '0', 'store:store:list', 'international', 103, 1, sysdate(), null, null, '门店管理');
 insert into sys_menu values('2131', '服务项目', '2102', '2', 'item', 'nail/item/index', '', 1, 0, 'C', '0', '0', 'nail:item:list', 'list', 103, 1, sysdate(), null, null, '服务项目');
 insert into sys_menu values('2132', '预约管理', '2102', '3', 'appointment', 'nail/appointment/index', '', 1, 0, 'C', '0', '0', 'nail:appointment:list', 'date', 103, 1, sysdate(), null, null, '预约管理');
@@ -425,6 +452,11 @@ insert into sys_menu values('2256', '新增', '2134', '2', '#', null, '', 1, 0, 
 insert into sys_menu values('2257', '修改', '2134', '3', '#', null, '', 1, 0, 'F', '0', '0', 'nail:commission:edit', '#', 103, 1, sysdate(), null, null, '');
 insert into sys_menu values('2258', '删除', '2134', '4', '#', null, '', 1, 0, 'F', '0', '0', 'nail:commission:remove', '#', 103, 1, sysdate(), null, null, '');
 insert into sys_menu values('2259', '导出', '2134', '5', '#', null, '', 1, 0, 'F', '0', '0', 'nail:commission:export', '#', 103, 1, sysdate(), null, null, '');
+insert into sys_menu values('2260', '查询', '2122', '1', '#', null, '', 1, 0, 'F', '0', '0', 'employee:performance:query', '#', 103, 1, sysdate(), null, null, '');
+insert into sys_menu values('2261', '新增', '2122', '2', '#', null, '', 1, 0, 'F', '0', '0', 'employee:performance:add', '#', 103, 1, sysdate(), null, null, '');
+insert into sys_menu values('2262', '修改', '2122', '3', '#', null, '', 1, 0, 'F', '0', '0', 'employee:performance:edit', '#', 103, 1, sysdate(), null, null, '');
+insert into sys_menu values('2263', '删除', '2122', '4', '#', null, '', 1, 0, 'F', '0', '0', 'employee:performance:remove', '#', 103, 1, sysdate(), null, null, '');
+insert into sys_menu values('2264', '导出', '2122', '5', '#', null, '', 1, 0, 'F', '0', '0', 'employee:performance:export', '#', 103, 1, sysdate(), null, null, '');
 insert into sys_menu values('2290', '看板查询', '2090', '1', '#', null, '', 1, 0, 'F', '0', '0', 'nail:dashboard:query', '#', 103, 1, sysdate(), null, null, '');
 
 -- 演示数据（字段顺序与建表一致：业务字段在前，租户与审计字段在后）

@@ -21,7 +21,8 @@ import java.util.Set;
 public class NailDataScopeHelper {
 
     private static final Set<String> STORE_ENTITIES = Set.of(
-        "NailMember", "NailEmployee", "NailEmployeeShift", "NailAppointment", "NailOrder"
+        "NailMember", "NailEmployee", "NailEmployeeShift", "NailEmployeePerformance",
+        "NailAppointment", "NailOrder"
     );
 
     public static Long currentStoreId() {
@@ -80,6 +81,8 @@ public class NailDataScopeHelper {
             } else if ("NailAppointment".equals(entityName) && employeeId != null) {
                 lqw.apply("employee_id = {0}", employeeId);
             } else if ("NailCommission".equals(entityName) && employeeId != null) {
+                lqw.apply("employee_id = {0}", employeeId);
+            } else if ("NailEmployeePerformance".equals(entityName) && employeeId != null) {
                 lqw.apply("employee_id = {0}", employeeId);
             } else {
                 lqw.apply("create_by = {0}", loginUser.getUserId());
