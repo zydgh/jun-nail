@@ -136,9 +136,7 @@ public class NailEmployeePerformanceServiceImpl
         bindEmployee(add);
         fillItemName(add);
         NailDataScopeHelper.fillStoreId(add);
-        if (StringUtils.isBlank(add.getPraise())) {
-            add.setPraise("0");
-        }
+        normalizePraise(add);
         boolean flag = baseMapper.insert(add) > 0;
         if (flag) {
             bo.setId(add.getId());
@@ -158,6 +156,7 @@ public class NailEmployeePerformanceServiceImpl
             bindEmployee(update);
         }
         fillItemName(update);
+        normalizePraise(update);
         return baseMapper.updateById(update) > 0;
     }
 
@@ -223,6 +222,15 @@ public class NailEmployeePerformanceServiceImpl
             throw new ServiceException("服务项目不存在");
         }
         entity.setItemName(item.getItemName());
+    }
+
+    private void normalizePraise(NailEmployeePerformance entity) {
+        if (StringUtils.isBlank(entity.getPraise())) {
+            entity.setPraise("0");
+        }
+        if (!"1".equals(entity.getPraise())) {
+            entity.setPraiseImages(null);
+        }
     }
 
     private NailEmployeePerformance scopedEntity(Long id) {

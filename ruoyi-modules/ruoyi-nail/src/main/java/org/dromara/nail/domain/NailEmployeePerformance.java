@@ -1,5 +1,7 @@
 package org.dromara.nail.domain;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -42,6 +44,9 @@ public class NailEmployeePerformance extends TenantEntity {
     private Date consumeTime;
 
     private String praise;
+
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String praiseImages;
 
     private String remark;
 

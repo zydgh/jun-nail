@@ -49,5 +49,7 @@ public class NailEmployeePerformanceBo extends BaseEntity {
 
     private String praise;
 
+    private String praiseImages;
+
     private String remark;
 }

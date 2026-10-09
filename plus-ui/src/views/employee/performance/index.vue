@@ -78,6 +78,12 @@
                 </el-tag>
               </template>
             </el-table-column>
+            <el-table-column label="好评图片" align="center" min-width="120">
+              <template #default="scope">
+                <image-preview v-if="scope.row.praise === '1' && scope.row.praiseImageUrls" :src="scope.row.praiseImageUrls" :width="48" :height="48" />
+                <span v-else>-</span>
+              </template>
+            </el-table-column>
             <el-table-column label="备注" prop="remark" align="center" min-width="130" show-overflow-tooltip />
             <el-table-column label="操作" align="center" width="130" fixed="right">
               <template #default="scope">
@@ -109,14 +115,7 @@
             </div>
           </template>
           <div v-loading="rankLoading" class="ranking-body">
-            <el-row :gutter="16">
-              <el-col :xs="24" :lg="14">
-                <div ref="amountChartRef" class="rank-chart"></div>
-              </el-col>
-              <el-col :xs="24" :lg="10">
-                <div ref="countChartRef" class="rank-chart"></div>
-              </el-col>
-            </el-row>
+            <div ref="amountChartRef" class="rank-chart"></div>
             <el-table border :data="rankingList" class="mt-4">
               <el-table-column label="排名" prop="rank" align="center" width="90">
                 <template #default="scope">
@@ -169,7 +168,10 @@
           />
         </el-form-item>
         <el-form-item label="客户好评" prop="praise">
-          <el-switch v-model="form.praise" active-value="1" inactive-value="0" active-text="好评" inactive-text="未好评" />
+          <el-switch v-model="form.praise" active-value="1" inactive-value="0" active-text="好评" inactive-text="未好评" @change="handlePraiseChange" />
+        </el-form-item>
+        <el-form-item v-if="form.praise === '1'" label="好评图片" prop="praiseImages">
+          <image-upload v-model="form.praiseImages" :limit="5" />
         </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" />
@@ -223,9 +225,7 @@ const dateRange = ref<[string, string]>();
 const queryFormRef = ref<ElFormInstance>();
 const formRef = ref<ElFormInstance>();
 const amountChartRef = ref<HTMLDivElement>();
-const countChartRef = ref<HTMLDivElement>();
 const amountChart = shallowRef<echarts.ECharts>();
-const countChart = shallowRef<echarts.ECharts>();
 const dialog = reactive<DialogOption>({ visible: false, title: '' });
 const periodLabel = computed(() => {
   if (rankPeriod.value === 'week') {
@@ -246,6 +246,7 @@ const initFormData: NailEmployeePerformanceForm = {
   customerPhone: undefined,
   consumeTime: undefined,
   praise: '0',
+  praiseImages: undefined,
   remark: undefined
 };
 
@@ -295,51 +296,55 @@ const ensureCharts = () => {
   if (amountChartRef.value && !amountChart.value) {
     amountChart.value = echarts.init(amountChartRef.value);
   }
-  if (countChartRef.value && !countChart.value) {
-    countChart.value = echarts.init(countChartRef.value);
-  }
 };
 
 const renderRankingCharts = () => {
   nextTick(() => {
     ensureCharts();
-    const names = rankingList.value.map((item) => item.employeeName || '未知员工').reverse();
-    const amounts = rankingList.value.map((item) => Number(item.totalAmount || 0)).reverse();
-    const serviceCounts = rankingList.value.map((item) => Number(item.serviceCount || 0));
-    const praiseCounts = rankingList.value.map((item) => Number(item.praiseCount || 0));
-    const categories = rankingList.value.map((item) => item.employeeName || '未知员工');
+    const names = rankingList.value.map((item) => item.employeeName || '未知员工');
+    const amounts = rankingList.value.map((item) => Number(item.totalAmount || 0));
 
     amountChart.value?.setOption(
       {
         title: {
-          text: `${periodLabel.value}业绩金额排行`,
+          text: `${periodLabel.value}业绩金额统计`,
           left: 'center',
           textStyle: { fontSize: 14, fontWeight: 600 }
         },
         tooltip: {
           trigger: 'axis',
-          axisPointer: { type: 'shadow' },
           valueFormatter: (value: number) => `¥ ${Number(value || 0).toFixed(2)}`
         },
-        grid: { left: 80, right: 24, top: 48, bottom: 24 },
-        xAxis: { type: 'value', axisLabel: { formatter: (value: number) => `¥${value}` } },
-        yAxis: { type: 'category', data: names },
+        grid: { left: 56, right: 28, top: 56, bottom: 48 },
+        xAxis: {
+          type: 'category',
+          boundaryGap: false,
+          data: names,
+          axisLabel: { interval: 0, rotate: names.length > 5 ? 30 : 0 }
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: { formatter: (value: number) => `¥${value}` }
+        },
         series: [
           {
             name: '业绩金额',
-            type: 'bar',
+            type: 'line',
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 8,
             data: amounts,
-            barMaxWidth: 28,
-            itemStyle: {
-              color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-                { offset: 0, color: '#f6a96a' },
-                { offset: 1, color: '#e85d4c' }
-              ]),
-              borderRadius: [0, 6, 6, 0]
+            lineStyle: { width: 3, color: '#e85d4c' },
+            itemStyle: { color: '#e85d4c' },
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(232, 93, 76, 0.35)' },
+                { offset: 1, color: 'rgba(232, 93, 76, 0.02)' }
+              ])
             },
             label: {
               show: true,
-              position: 'right',
+              position: 'top',
               formatter: (params: any) => `¥ ${Number(params.value || 0).toFixed(0)}`
             }
           }
@@ -348,44 +353,7 @@ const renderRankingCharts = () => {
       true
     );
 
-    countChart.value?.setOption(
-      {
-        title: {
-          text: `${periodLabel.value}服务与好评`,
-          left: 'center',
-          textStyle: { fontSize: 14, fontWeight: 600 }
-        },
-        tooltip: { trigger: 'axis' },
-        legend: { top: 28, data: ['服务单数', '好评数'] },
-        grid: { left: 48, right: 16, top: 64, bottom: 28 },
-        xAxis: {
-          type: 'category',
-          data: categories,
-          axisLabel: { interval: 0, rotate: categories.length > 4 ? 30 : 0 }
-        },
-        yAxis: { type: 'value', minInterval: 1 },
-        series: [
-          {
-            name: '服务单数',
-            type: 'bar',
-            data: serviceCounts,
-            barMaxWidth: 24,
-            itemStyle: { color: '#4c8bf5', borderRadius: [4, 4, 0, 0] }
-          },
-          {
-            name: '好评数',
-            type: 'bar',
-            data: praiseCounts,
-            barMaxWidth: 24,
-            itemStyle: { color: '#3cb371', borderRadius: [4, 4, 0, 0] }
-          }
-        ]
-      },
-      true
-    );
-
     amountChart.value?.resize();
-    countChart.value?.resize();
   });
 };
 
@@ -408,7 +376,11 @@ const handleTabChange = (name: string | number) => {
 
 const handleResize = () => {
   amountChart.value?.resize();
-  countChart.value?.resize();
+};
+const handlePraiseChange = (value: string | number | boolean) => {
+  if (value !== '1') {
+    form.value.praiseImages = undefined;
+  }
 };
 const handleQuery = () => {
   queryParams.value.pageNum = 1;
@@ -456,10 +428,14 @@ const submitForm = () => {
     if (!valid) return;
     buttonLoading.value = true;
     try {
-      if (form.value.id) {
-        await updateNailEmployeePerformance(form.value);
+      const payload = { ...form.value };
+      if (payload.praise !== '1') {
+        payload.praiseImages = undefined;
+      }
+      if (payload.id) {
+        await updateNailEmployeePerformance(payload);
       } else {
-        await addNailEmployeePerformance(form.value);
+        await addNailEmployeePerformance(payload);
       }
       proxy?.$modal.msgSuccess('操作成功');
       dialog.visible = false;
@@ -490,7 +466,6 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize);
   amountChart.value?.dispose();
-  countChart.value?.dispose();
 });
 </script>
 
@@ -507,7 +482,7 @@ onBeforeUnmount(() => {
 
 .rank-chart {
   width: 100%;
-  height: 360px;
+  height: 380px;
 }
 
 .rank {

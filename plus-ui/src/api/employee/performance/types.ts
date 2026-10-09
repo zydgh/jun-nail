@@ -10,6 +10,8 @@ export interface NailEmployeePerformanceVO {
   customerPhone?: string;
   consumeTime?: string;
   praise?: string;
+  praiseImages?: string;
+  praiseImageUrls?: string;
   remark?: string;
 }
 
@@ -22,6 +24,7 @@ export interface NailEmployeePerformanceForm extends BaseEntity {
   customerPhone?: string;
   consumeTime?: string;
   praise?: string;
+  praiseImages?: string;
   remark?: string;
 }
 

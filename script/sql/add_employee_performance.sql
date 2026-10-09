@@ -9,6 +9,7 @@ create table if not exists nail_employee_performance (
   customer_phone varchar(20) default null comment '客户手机号',
   consume_time datetime not null comment '消费时间',
   praise char(1) default '0' comment '是否好评（0否 1是）',
+  praise_images varchar(500) default null comment '好评图片OSS ID，逗号分隔',
   tenant_id varchar(20) default '000000' comment '租户编号',
   create_dept bigint(20) default null comment '创建部门',
   create_by bigint(20) default null comment '创建者',

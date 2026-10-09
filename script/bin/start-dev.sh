@@ -75,6 +75,7 @@ ensure_mysql_redis() {
     mysql_exec ry-vue < "${ROOT_DIR}/script/sql/fix_oss_minio.sql"
   fi
   mysql_exec ry-vue < "${ROOT_DIR}/script/sql/add_employee_performance.sql"
+  mysql_exec ry-vue < "${ROOT_DIR}/script/sql/add_performance_praise_images.sql" || true
 }
 
 ensure_minio() {
