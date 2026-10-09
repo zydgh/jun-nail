@@ -35,19 +35,10 @@
           <template #header>
             <el-row :gutter="10">
               <el-col :span="1.5">
-                <el-button v-hasPermi="['employee:performance:add']" type="primary" plain icon="Plus" @click="handleAdd">
-                  新增业绩
-                </el-button>
+                <el-button v-hasPermi="['employee:performance:add']" type="primary" plain icon="Plus" @click="handleAdd"> 新增业绩 </el-button>
               </el-col>
               <el-col :span="1.5">
-                <el-button
-                  v-hasPermi="['employee:performance:edit']"
-                  type="success"
-                  plain
-                  icon="Edit"
-                  :disabled="single"
-                  @click="handleUpdate()"
-                >
+                <el-button v-hasPermi="['employee:performance:edit']" type="success" plain icon="Edit" :disabled="single" @click="handleUpdate()">
                   修改
                 </el-button>
               </el-col>
@@ -64,9 +55,7 @@
                 </el-button>
               </el-col>
               <el-col :span="1.5">
-                <el-button v-hasPermi="['employee:performance:export']" type="warning" plain icon="Download" @click="handleExport">
-                  导出
-                </el-button>
+                <el-button v-hasPermi="['employee:performance:export']" type="warning" plain icon="Download" @click="handleExport"> 导出 </el-button>
               </el-col>
               <right-toolbar v-model:show-search="showSearch" @query-table="getList" />
             </el-row>
@@ -257,14 +246,9 @@ const data = reactive({
 });
 const { form, queryParams, rules } = toRefs(data);
 
-const enabledEmployeeOptions = computed(() =>
-  employeeOptions.value.filter((item) => !item.status || item.status === '0')
-);
-const enabledItemOptions = computed(() =>
-  itemOptions.value.filter((item) => !item.status || item.status === '0')
-);
-const employeeLabel = (item: NailEmployeeVO) =>
-  item.employeeNo ? `${item.name}（${item.employeeNo}）` : item.name || String(item.id);
+const enabledEmployeeOptions = computed(() => employeeOptions.value.filter((item) => !item.status || item.status === '0'));
+const enabledItemOptions = computed(() => itemOptions.value.filter((item) => !item.status || item.status === '0'));
+const employeeLabel = (item: NailEmployeeVO) => (item.employeeNo ? `${item.name}（${item.employeeNo}）` : item.name || String(item.id));
 
 const loadOptions = async () => {
   const [employeeRes, itemRes] = await Promise.all([
