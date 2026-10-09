@@ -313,12 +313,12 @@ const renderRankingCharts = () => {
         },
         tooltip: {
           trigger: 'axis',
+          axisPointer: { type: 'shadow' },
           valueFormatter: (value: number) => `¥ ${Number(value || 0).toFixed(2)}`
         },
         grid: { left: 56, right: 28, top: 56, bottom: 48 },
         xAxis: {
           type: 'category',
-          boundaryGap: false,
           data: names,
           axisLabel: { interval: 0, rotate: names.length > 5 ? 30 : 0 }
         },
@@ -329,18 +329,15 @@ const renderRankingCharts = () => {
         series: [
           {
             name: '业绩金额',
-            type: 'line',
-            smooth: true,
-            symbol: 'circle',
-            symbolSize: 8,
+            type: 'bar',
             data: amounts,
-            lineStyle: { width: 3, color: '#e85d4c' },
-            itemStyle: { color: '#e85d4c' },
-            areaStyle: {
+            barMaxWidth: 48,
+            itemStyle: {
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: 'rgba(232, 93, 76, 0.35)' },
-                { offset: 1, color: 'rgba(232, 93, 76, 0.02)' }
-              ])
+                { offset: 0, color: '#f6a96a' },
+                { offset: 1, color: '#e85d4c' }
+              ]),
+              borderRadius: [6, 6, 0, 0]
             },
             label: {
               show: true,
