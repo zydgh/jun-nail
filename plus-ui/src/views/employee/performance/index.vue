@@ -144,13 +144,26 @@
             <el-option v-for="item in enabledEmployeeOptions" :key="item.id" :label="employeeLabel(item)" :value="item.id" />
           </el-select>
         </el-form-item>
+        <el-form-item label="服务项目" prop="itemId">
+          <el-select
+            v-model="form.itemId"
+            placeholder="请选择项目"
+            clearable
+            filterable
+            style="width: 100%"
+            @change="handleItemChange"
+          >
+            <el-option v-for="item in enabledItemOptions" :key="item.id" :label="itemLabel(item)" :value="item.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="价格类型">
+          <el-radio-group v-model="priceType" @change="fillAmountFromItem">
+            <el-radio-button value="price">原价</el-radio-button>
+            <el-radio-button value="memberPrice">会员价</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item label="业绩金额" prop="amount">
           <el-input-number v-model="form.amount" :min="0.01" :precision="2" :step="10" controls-position="right" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="服务项目" prop="itemId">
-          <el-select v-model="form.itemId" placeholder="请选择项目" clearable filterable style="width: 100%">
-            <el-option v-for="item in enabledItemOptions" :key="item.id" :label="item.itemName" :value="item.id" />
-          </el-select>
         </el-form-item>
         <el-form-item label="客户姓名" prop="customerName">
           <el-input v-model="form.customerName" placeholder="请输入客户姓名" />
@@ -226,6 +239,7 @@ const queryFormRef = ref<ElFormInstance>();
 const formRef = ref<ElFormInstance>();
 const amountChartRef = ref<HTMLDivElement>();
 const amountChart = shallowRef<echarts.ECharts>();
+const priceType = ref<'price' | 'memberPrice'>('price');
 const dialog = reactive<DialogOption>({ visible: false, title: '' });
 const periodLabel = computed(() => {
   if (rankPeriod.value === 'week') {
@@ -273,6 +287,49 @@ const { form, queryParams, rules } = toRefs(data);
 const enabledEmployeeOptions = computed(() => employeeOptions.value.filter((item) => !item.status || item.status === '0'));
 const enabledItemOptions = computed(() => itemOptions.value.filter((item) => !item.status || item.status === '0'));
 const employeeLabel = (item: NailEmployeeVO) => (item.employeeNo ? `${item.name}（${item.employeeNo}）` : item.name || String(item.id));
+const formatMoney = (value?: number | string) => {
+  if (value == null || value === '') {
+    return '-';
+  }
+  const num = Number(value);
+  return Number.isFinite(num) ? `¥${num.toFixed(2)}` : '-';
+};
+const itemLabel = (item: NailServiceItemVO) => {
+  const name = item.itemName || String(item.id);
+  return `${name}（原价${formatMoney(item.price)} / 会员${formatMoney(item.memberPrice)}）`;
+};
+const resolveItemAmount = (item?: NailServiceItemVO) => {
+  if (!item) {
+    return undefined;
+  }
+  const raw = priceType.value === 'memberPrice' ? item.memberPrice : item.price;
+  if (raw == null || raw === '') {
+    const fallback = item.price ?? item.memberPrice;
+    if (fallback == null || fallback === '') {
+      return undefined;
+    }
+    const fallbackNum = Number(fallback);
+    return Number.isFinite(fallbackNum) && fallbackNum > 0 ? fallbackNum : undefined;
+  }
+  const num = Number(raw);
+  return Number.isFinite(num) && num > 0 ? num : undefined;
+};
+const fillAmountFromItem = () => {
+  if (form.value.itemId == null || form.value.itemId === '') {
+    return;
+  }
+  const item = itemOptions.value.find((row) => String(row.id) === String(form.value.itemId));
+  const amount = resolveItemAmount(item);
+  if (amount != null) {
+    form.value.amount = amount;
+  }
+};
+const handleItemChange = (itemId?: string | number) => {
+  if (itemId == null || itemId === '') {
+    return;
+  }
+  fillAmountFromItem();
+};
 
 const loadOptions = async () => {
   const res = await getNailEmployeePerformanceOptions();
@@ -389,6 +446,7 @@ const resetQuery = () => {
   handleQuery();
 };
 const reset = () => {
+  priceType.value = 'price';
   form.value = {
     ...initFormData,
     consumeTime: dayjs().format('YYYY-MM-DD HH:mm:ss')
