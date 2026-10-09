@@ -18,6 +18,7 @@ import org.dromara.common.web.core.BaseController;
 import org.dromara.nail.domain.bo.NailEmployeePerformanceBo;
 import org.dromara.nail.domain.vo.NailEmployeePerformanceRankVo;
 import org.dromara.nail.domain.vo.NailEmployeePerformanceVo;
+import org.dromara.nail.domain.vo.NailPerformanceMemberCheckVo;
 import org.dromara.nail.service.INailEmployeePerformanceService;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -63,6 +64,14 @@ public class NailEmployeePerformanceController extends BaseController {
     @GetMapping("/options")
     public R<Map<String, Object>> options() {
         return R.ok(performanceService.options());
+    }
+
+    @SaCheckPermission("employee:performance:list")
+    @GetMapping("/member-check")
+    public R<NailPerformanceMemberCheckVo> memberCheck(
+        @RequestParam(required = false) String phone,
+        @RequestParam(required = false) String name) {
+        return R.ok(performanceService.checkMember(phone, name));
     }
 
     @SaCheckPermission("employee:performance:export")

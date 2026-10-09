@@ -144,6 +144,22 @@
             <el-option v-for="item in enabledEmployeeOptions" :key="item.id" :label="employeeLabel(item)" :value="item.id" />
           </el-select>
         </el-form-item>
+        <el-form-item label="客户姓名" prop="customerName">
+          <el-input v-model="form.customerName" placeholder="请输入客户姓名" @blur="handleCustomerBlur" />
+        </el-form-item>
+        <el-form-item label="客户手机号" prop="customerPhone">
+          <el-input
+            v-model="form.customerPhone"
+            placeholder="请输入客户手机号"
+            maxlength="20"
+            @blur="handleCustomerBlur"
+          />
+          <div class="member-tip">
+            <el-tag v-if="memberChecked && isMember" type="success" size="small">会员</el-tag>
+            <el-tag v-else-if="memberChecked && !isMember" type="info" size="small">非会员（原价）</el-tag>
+            <span v-if="memberChecked && isMember && matchedMemberNo" class="member-no">编号 {{ matchedMemberNo }}</span>
+          </div>
+        </el-form-item>
         <el-form-item label="服务项目" prop="itemId">
           <el-select
             v-model="form.itemId"
@@ -157,19 +173,13 @@
           </el-select>
         </el-form-item>
         <el-form-item label="价格类型">
-          <el-radio-group v-model="priceType" @change="fillAmountFromItem">
+          <el-radio-group v-model="priceType" :disabled="memberChecked && !isMember" @change="fillAmountFromItem">
             <el-radio-button value="price">原价</el-radio-button>
-            <el-radio-button value="memberPrice">会员价</el-radio-button>
+            <el-radio-button value="memberPrice" :disabled="memberChecked && !isMember">会员价</el-radio-button>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="业绩金额" prop="amount">
           <el-input-number v-model="form.amount" :min="0.01" :precision="2" :step="10" controls-position="right" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="客户姓名" prop="customerName">
-          <el-input v-model="form.customerName" placeholder="请输入客户姓名" />
-        </el-form-item>
-        <el-form-item label="客户手机号" prop="customerPhone">
-          <el-input v-model="form.customerPhone" placeholder="请输入客户手机号" maxlength="20" />
         </el-form-item>
         <el-form-item label="消费时间" prop="consumeTime">
           <el-date-picker
@@ -201,6 +211,7 @@
 <script setup name="NailEmployeePerformance" lang="ts">
 import {
   addNailEmployeePerformance,
+  checkNailEmployeePerformanceMember,
   delNailEmployeePerformance,
   getNailEmployeePerformance,
   getNailEmployeePerformanceOptions,
@@ -240,6 +251,10 @@ const formRef = ref<ElFormInstance>();
 const amountChartRef = ref<HTMLDivElement>();
 const amountChart = shallowRef<echarts.ECharts>();
 const priceType = ref<'price' | 'memberPrice'>('price');
+const isMember = ref(false);
+const memberChecked = ref(false);
+const matchedMemberNo = ref('');
+const memberChecking = ref(false);
 const dialog = reactive<DialogOption>({ visible: false, title: '' });
 const periodLabel = computed(() => {
   if (rankPeriod.value === 'week') {
@@ -329,6 +344,58 @@ const handleItemChange = (itemId?: string | number) => {
     return;
   }
   fillAmountFromItem();
+};
+
+const applyMemberPriceType = (member: boolean) => {
+  isMember.value = member;
+  memberChecked.value = true;
+  if (!member) {
+    priceType.value = 'price';
+  } else {
+    priceType.value = 'memberPrice';
+  }
+  fillAmountFromItem();
+};
+
+const resetMemberState = () => {
+  isMember.value = false;
+  memberChecked.value = false;
+  matchedMemberNo.value = '';
+  priceType.value = 'price';
+};
+
+const handleCustomerBlur = async () => {
+  const phone = (form.value.customerPhone || '').trim();
+  const name = (form.value.customerName || '').trim();
+  if (!phone && !name) {
+    resetMemberState();
+    fillAmountFromItem();
+    return;
+  }
+  if (memberChecking.value) {
+    return;
+  }
+  memberChecking.value = true;
+  try {
+    const res = await checkNailEmployeePerformanceMember({ phone, name });
+    const data = res.data;
+    const member = !!data?.member;
+    applyMemberPriceType(member);
+    matchedMemberNo.value = member ? data?.memberNo || '' : '';
+    if (member) {
+      if (!form.value.customerName && data?.name) {
+        form.value.customerName = data.name;
+      }
+      if (!form.value.customerPhone && data?.phone) {
+        form.value.customerPhone = data.phone;
+      }
+    }
+  } catch {
+    applyMemberPriceType(false);
+    matchedMemberNo.value = '';
+  } finally {
+    memberChecking.value = false;
+  }
 };
 
 const loadOptions = async () => {
@@ -446,7 +513,7 @@ const resetQuery = () => {
   handleQuery();
 };
 const reset = () => {
-  priceType.value = 'price';
+  resetMemberState();
   form.value = {
     ...initFormData,
     consumeTime: dayjs().format('YYYY-MM-DD HH:mm:ss')
@@ -477,6 +544,7 @@ const handleUpdate = async (row?: NailEmployeePerformanceVO) => {
   Object.assign(form.value, res.data);
   dialog.title = '修改业绩记录';
   dialog.visible = true;
+  await handleCustomerBlur();
 };
 const submitForm = () => {
   formRef.value?.validate(async (valid) => {
@@ -568,5 +636,18 @@ onBeforeUnmount(() => {
 
 .amount {
   color: var(--el-color-danger);
+}
+
+.member-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  min-height: 22px;
+}
+
+.member-no {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
 }
 </style>

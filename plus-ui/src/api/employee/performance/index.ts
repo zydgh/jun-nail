@@ -38,3 +38,16 @@ export const getNailEmployeePerformanceOptions = (): AxiosPromise<{
 }> => {
   return request({ url: '/employee/performance/options', method: 'get' });
 };
+
+export const checkNailEmployeePerformanceMember = (params: {
+  phone?: string;
+  name?: string;
+}): AxiosPromise<{
+  member: boolean;
+  memberId?: number | string;
+  memberNo?: string;
+  name?: string;
+  phone?: string;
+}> => {
+  return request({ url: '/employee/performance/member-check', method: 'get', params });
+};

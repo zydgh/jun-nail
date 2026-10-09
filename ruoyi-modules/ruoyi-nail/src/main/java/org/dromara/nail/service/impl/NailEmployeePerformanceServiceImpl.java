@@ -12,15 +12,18 @@ import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.satoken.utils.LoginHelper;
 import org.dromara.nail.domain.NailEmployee;
 import org.dromara.nail.domain.NailEmployeePerformance;
+import org.dromara.nail.domain.NailMember;
 import org.dromara.nail.domain.NailServiceItem;
 import org.dromara.nail.domain.bo.NailEmployeePerformanceBo;
 import org.dromara.nail.domain.vo.NailEmployeePerformanceRankVo;
 import org.dromara.nail.domain.vo.NailEmployeePerformanceVo;
 import org.dromara.nail.domain.vo.NailEmployeeVo;
+import org.dromara.nail.domain.vo.NailPerformanceMemberCheckVo;
 import org.dromara.nail.domain.vo.NailServiceItemVo;
 import org.dromara.nail.helper.NailDataScopeHelper;
 import org.dromara.nail.mapper.NailEmployeeMapper;
 import org.dromara.nail.mapper.NailEmployeePerformanceMapper;
+import org.dromara.nail.mapper.NailMemberMapper;
 import org.dromara.nail.mapper.NailServiceItemMapper;
 import org.dromara.nail.service.INailEmployeePerformanceService;
 import org.springframework.stereotype.Service;
@@ -47,6 +50,7 @@ public class NailEmployeePerformanceServiceImpl
     private final NailEmployeePerformanceMapper baseMapper;
     private final NailEmployeeMapper employeeMapper;
     private final NailServiceItemMapper itemMapper;
+    private final NailMemberMapper memberMapper;
 
     @Override
     public NailEmployeePerformanceVo queryById(Long id) {
@@ -127,6 +131,37 @@ public class NailEmployeePerformanceServiceImpl
         itemQuery.orderByAsc(NailServiceItem::getSort);
         List<NailServiceItemVo> items = itemMapper.selectVoList(itemQuery);
         return Map.of("employees", employees, "items", items);
+    }
+
+    @Override
+    public NailPerformanceMemberCheckVo checkMember(String phone, String name) {
+        NailPerformanceMemberCheckVo result = new NailPerformanceMemberCheckVo();
+        result.setMember(false);
+        String phoneValue = StringUtils.trim(phone);
+        String nameValue = StringUtils.trim(name);
+        if (StringUtils.isBlank(phoneValue) && StringUtils.isBlank(nameValue)) {
+            return result;
+        }
+        LambdaQueryWrapper<NailMember> lqw = Wrappers.lambdaQuery();
+        lqw.eq(NailMember::getStatus, "0");
+        if (StringUtils.isNotBlank(phoneValue)) {
+            lqw.eq(NailMember::getPhone, phoneValue);
+        } else {
+            lqw.eq(NailMember::getName, nameValue);
+        }
+        NailDataScopeHelper.applyStoreScope(lqw, "NailMember");
+        lqw.orderByDesc(NailMember::getId);
+        lqw.last("LIMIT 1");
+        NailMember member = memberMapper.selectOne(lqw);
+        if (member == null) {
+            return result;
+        }
+        result.setMember(true);
+        result.setMemberId(member.getId());
+        result.setMemberNo(member.getMemberNo());
+        result.setName(member.getName());
+        result.setPhone(member.getPhone());
+        return result;
     }
 
     @Override

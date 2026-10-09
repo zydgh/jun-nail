@@ -5,6 +5,7 @@ import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.nail.domain.bo.NailEmployeePerformanceBo;
 import org.dromara.nail.domain.vo.NailEmployeePerformanceRankVo;
 import org.dromara.nail.domain.vo.NailEmployeePerformanceVo;
+import org.dromara.nail.domain.vo.NailPerformanceMemberCheckVo;
 
 import java.util.Collection;
 import java.util.List;
@@ -25,6 +26,8 @@ public interface INailEmployeePerformanceService {
     List<NailEmployeePerformanceRankVo> ranking(String period);
 
     Map<String, Object> options();
+
+    NailPerformanceMemberCheckVo checkMember(String phone, String name);
 
     Boolean insertByBo(NailEmployeePerformanceBo bo);
 
