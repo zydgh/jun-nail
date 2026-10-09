@@ -108,22 +108,32 @@
               </el-radio-group>
             </div>
           </template>
-          <el-table v-loading="rankLoading" border :data="rankingList">
-            <el-table-column label="排名" prop="rank" align="center" width="90">
-              <template #default="scope">
-                <span :class="`rank rank-${scope.row.rank}`">{{ scope.row.rank }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="员工" prop="employeeName" align="center" />
-            <el-table-column label="业绩金额" prop="totalAmount" align="right">
-              <template #default="scope">
-                <strong class="amount">¥ {{ Number(scope.row.totalAmount || 0).toFixed(2) }}</strong>
-              </template>
-            </el-table-column>
-            <el-table-column label="服务单数" prop="serviceCount" align="center" />
-            <el-table-column label="好评数" prop="praiseCount" align="center" />
-          </el-table>
-          <el-empty v-if="!rankLoading && rankingList.length === 0" description="当前周期暂无业绩记录" />
+          <div v-loading="rankLoading" class="ranking-body">
+            <el-row :gutter="16">
+              <el-col :xs="24" :lg="14">
+                <div ref="amountChartRef" class="rank-chart"></div>
+              </el-col>
+              <el-col :xs="24" :lg="10">
+                <div ref="countChartRef" class="rank-chart"></div>
+              </el-col>
+            </el-row>
+            <el-table border :data="rankingList" class="mt-4">
+              <el-table-column label="排名" prop="rank" align="center" width="90">
+                <template #default="scope">
+                  <span :class="`rank rank-${scope.row.rank}`">{{ scope.row.rank }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="员工" prop="employeeName" align="center" />
+              <el-table-column label="业绩金额" prop="totalAmount" align="right">
+                <template #default="scope">
+                  <strong class="amount">¥ {{ Number(scope.row.totalAmount || 0).toFixed(2) }}</strong>
+                </template>
+              </el-table-column>
+              <el-table-column label="服务单数" prop="serviceCount" align="center" />
+              <el-table-column label="好评数" prop="praiseCount" align="center" />
+            </el-table>
+            <el-empty v-if="!rankLoading && rankingList.length === 0" description="当前周期暂无业绩记录" />
+          </div>
         </el-card>
       </el-tab-pane>
     </el-tabs>
@@ -191,6 +201,7 @@ import {
 } from '@/api/employee/performance/types';
 import { NailEmployeeVO } from '@/api/employee/employee/types';
 import { NailServiceItemVO } from '@/api/nail/item/types';
+import * as echarts from 'echarts';
 import dayjs from 'dayjs';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
@@ -211,7 +222,20 @@ const rankPeriod = ref<'day' | 'week' | 'month'>('day');
 const dateRange = ref<[string, string]>();
 const queryFormRef = ref<ElFormInstance>();
 const formRef = ref<ElFormInstance>();
+const amountChartRef = ref<HTMLDivElement>();
+const countChartRef = ref<HTMLDivElement>();
+const amountChart = shallowRef<echarts.ECharts>();
+const countChart = shallowRef<echarts.ECharts>();
 const dialog = reactive<DialogOption>({ visible: false, title: '' });
+const periodLabel = computed(() => {
+  if (rankPeriod.value === 'week') {
+    return '本周';
+  }
+  if (rankPeriod.value === 'month') {
+    return '本月';
+  }
+  return '当天';
+});
 
 const initFormData: NailEmployeePerformanceForm = {
   id: undefined,
@@ -267,11 +291,110 @@ const getList = async () => {
   }
 };
 
+const ensureCharts = () => {
+  if (amountChartRef.value && !amountChart.value) {
+    amountChart.value = echarts.init(amountChartRef.value);
+  }
+  if (countChartRef.value && !countChart.value) {
+    countChart.value = echarts.init(countChartRef.value);
+  }
+};
+
+const renderRankingCharts = () => {
+  nextTick(() => {
+    ensureCharts();
+    const names = rankingList.value.map((item) => item.employeeName || '未知员工').reverse();
+    const amounts = rankingList.value.map((item) => Number(item.totalAmount || 0)).reverse();
+    const serviceCounts = rankingList.value.map((item) => Number(item.serviceCount || 0));
+    const praiseCounts = rankingList.value.map((item) => Number(item.praiseCount || 0));
+    const categories = rankingList.value.map((item) => item.employeeName || '未知员工');
+
+    amountChart.value?.setOption(
+      {
+        title: {
+          text: `${periodLabel.value}业绩金额排行`,
+          left: 'center',
+          textStyle: { fontSize: 14, fontWeight: 600 }
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          valueFormatter: (value: number) => `¥ ${Number(value || 0).toFixed(2)}`
+        },
+        grid: { left: 80, right: 24, top: 48, bottom: 24 },
+        xAxis: { type: 'value', axisLabel: { formatter: (value: number) => `¥${value}` } },
+        yAxis: { type: 'category', data: names },
+        series: [
+          {
+            name: '业绩金额',
+            type: 'bar',
+            data: amounts,
+            barMaxWidth: 28,
+            itemStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                { offset: 0, color: '#f6a96a' },
+                { offset: 1, color: '#e85d4c' }
+              ]),
+              borderRadius: [0, 6, 6, 0]
+            },
+            label: {
+              show: true,
+              position: 'right',
+              formatter: (params: any) => `¥ ${Number(params.value || 0).toFixed(0)}`
+            }
+          }
+        ]
+      },
+      true
+    );
+
+    countChart.value?.setOption(
+      {
+        title: {
+          text: `${periodLabel.value}服务与好评`,
+          left: 'center',
+          textStyle: { fontSize: 14, fontWeight: 600 }
+        },
+        tooltip: { trigger: 'axis' },
+        legend: { top: 28, data: ['服务单数', '好评数'] },
+        grid: { left: 48, right: 16, top: 64, bottom: 28 },
+        xAxis: {
+          type: 'category',
+          data: categories,
+          axisLabel: { interval: 0, rotate: categories.length > 4 ? 30 : 0 }
+        },
+        yAxis: { type: 'value', minInterval: 1 },
+        series: [
+          {
+            name: '服务单数',
+            type: 'bar',
+            data: serviceCounts,
+            barMaxWidth: 24,
+            itemStyle: { color: '#4c8bf5', borderRadius: [4, 4, 0, 0] }
+          },
+          {
+            name: '好评数',
+            type: 'bar',
+            data: praiseCounts,
+            barMaxWidth: 24,
+            itemStyle: { color: '#3cb371', borderRadius: [4, 4, 0, 0] }
+          }
+        ]
+      },
+      true
+    );
+
+    amountChart.value?.resize();
+    countChart.value?.resize();
+  });
+};
+
 const getRanking = async () => {
   rankLoading.value = true;
   try {
     const res = await getNailEmployeePerformanceRanking(rankPeriod.value);
     rankingList.value = res.data || [];
+    renderRankingCharts();
   } finally {
     rankLoading.value = false;
   }
@@ -281,6 +404,11 @@ const handleTabChange = (name: string | number) => {
   if (name === 'ranking') {
     getRanking();
   }
+};
+
+const handleResize = () => {
+  amountChart.value?.resize();
+  countChart.value?.resize();
 };
 const handleQuery = () => {
   queryParams.value.pageNum = 1;
@@ -356,6 +484,13 @@ const handleExport = () => {
 onMounted(async () => {
   await loadOptions();
   await getList();
+  window.addEventListener('resize', handleResize);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize);
+  amountChart.value?.dispose();
+  countChart.value?.dispose();
 });
 </script>
 
@@ -364,6 +499,15 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.ranking-body {
+  min-height: 240px;
+}
+
+.rank-chart {
+  width: 100%;
+  height: 360px;
 }
 
 .rank {
