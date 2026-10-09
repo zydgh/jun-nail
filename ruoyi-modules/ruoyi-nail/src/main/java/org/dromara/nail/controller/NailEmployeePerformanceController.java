@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 员工业绩
@@ -56,6 +57,12 @@ public class NailEmployeePerformanceController extends BaseController {
     public R<List<NailEmployeePerformanceRankVo>> ranking(
         @RequestParam(defaultValue = "day") String period) {
         return R.ok(performanceService.ranking(period));
+    }
+
+    @SaCheckPermission("employee:performance:list")
+    @GetMapping("/options")
+    public R<Map<String, Object>> options() {
+        return R.ok(performanceService.options());
     }
 
     @SaCheckPermission("employee:performance:export")

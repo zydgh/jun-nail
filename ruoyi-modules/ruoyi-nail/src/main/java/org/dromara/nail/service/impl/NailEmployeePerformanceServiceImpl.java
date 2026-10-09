@@ -16,6 +16,8 @@ import org.dromara.nail.domain.NailServiceItem;
 import org.dromara.nail.domain.bo.NailEmployeePerformanceBo;
 import org.dromara.nail.domain.vo.NailEmployeePerformanceRankVo;
 import org.dromara.nail.domain.vo.NailEmployeePerformanceVo;
+import org.dromara.nail.domain.vo.NailEmployeeVo;
+import org.dromara.nail.domain.vo.NailServiceItemVo;
 import org.dromara.nail.helper.NailDataScopeHelper;
 import org.dromara.nail.mapper.NailEmployeeMapper;
 import org.dromara.nail.mapper.NailEmployeePerformanceMapper;
@@ -105,6 +107,26 @@ public class NailEmployeePerformanceServiceImpl
             row.setEmployeeName(names.getOrDefault(row.getEmployeeId(), "未知员工"));
         }
         return result;
+    }
+
+    @Override
+    public Map<String, Object> options() {
+        LambdaQueryWrapper<NailEmployee> employeeQuery = Wrappers.lambdaQuery();
+        employeeQuery.eq(NailEmployee::getStatus, "0");
+        if (!LoginHelper.isSuperAdmin()) {
+            Long currentEmployeeId = NailDataScopeHelper.currentEmployeeId();
+            if (currentEmployeeId == null) {
+                throw new ServiceException("当前账号未关联员工");
+            }
+            employeeQuery.eq(NailEmployee::getId, currentEmployeeId);
+        }
+        List<NailEmployeeVo> employees = employeeMapper.selectVoList(employeeQuery);
+
+        LambdaQueryWrapper<NailServiceItem> itemQuery = Wrappers.lambdaQuery();
+        itemQuery.eq(NailServiceItem::getStatus, "0");
+        itemQuery.orderByAsc(NailServiceItem::getSort);
+        List<NailServiceItemVo> items = itemMapper.selectVoList(itemQuery);
+        return Map.of("employees", employees, "items", items);
     }
 
     @Override

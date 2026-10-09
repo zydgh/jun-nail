@@ -1,6 +1,8 @@
 import request from '@/utils/request';
 import { AxiosPromise } from 'axios';
 import { NailEmployeePerformanceForm, NailEmployeePerformanceQuery, NailEmployeePerformanceRankVO, NailEmployeePerformanceVO } from './types';
+import { NailEmployeeVO } from '@/api/employee/employee/types';
+import { NailServiceItemVO } from '@/api/nail/item/types';
 
 export const listNailEmployeePerformance = (query?: NailEmployeePerformanceQuery): AxiosPromise<NailEmployeePerformanceVO[]> => {
   return request({ url: '/employee/performance/list', method: 'get', params: query });
@@ -28,4 +30,11 @@ export const getNailEmployeePerformanceRanking = (period: 'day' | 'week' | 'mont
     method: 'get',
     params: { period }
   });
+};
+
+export const getNailEmployeePerformanceOptions = (): AxiosPromise<{
+  employees: NailEmployeeVO[];
+  items: NailServiceItemVO[];
+}> => {
+  return request({ url: '/employee/performance/options', method: 'get' });
 };

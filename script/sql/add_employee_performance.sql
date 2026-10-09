@@ -60,11 +60,13 @@ select 2264, '导出', 2122, 5, '#', null, '', 1, 0, 'F',
 where not exists (select 1 from sys_menu where menu_id = 2264);
 
 insert ignore into sys_role_menu(role_id, menu_id)
-select role_id, 2122 from sys_role where role_key in ('admin', 'common');
+select role_id, 2101 from sys_role where role_key in ('store_manager', 'nail_artist');
+insert ignore into sys_role_menu(role_id, menu_id)
+select role_id, 2122 from sys_role where role_key in ('store_manager', 'nail_artist');
 insert ignore into sys_role_menu(role_id, menu_id)
 select role_id, menu_id from sys_role
 cross join (
   select 2260 menu_id union all select 2261 union all select 2262
   union all select 2263 union all select 2264
 ) performance_menu
-where role_key in ('admin', 'common');
+where role_key in ('store_manager', 'nail_artist');

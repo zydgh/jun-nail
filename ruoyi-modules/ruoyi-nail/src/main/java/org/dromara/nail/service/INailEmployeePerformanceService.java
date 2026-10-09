@@ -8,6 +8,7 @@ import org.dromara.nail.domain.vo.NailEmployeePerformanceVo;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 员工业绩服务
@@ -22,6 +23,8 @@ public interface INailEmployeePerformanceService {
     List<NailEmployeePerformanceVo> queryList(NailEmployeePerformanceBo bo);
 
     List<NailEmployeePerformanceRankVo> ranking(String period);
+
+    Map<String, Object> options();
 
     Boolean insertByBo(NailEmployeePerformanceBo bo);
 

@@ -178,6 +178,7 @@ import {
   addNailEmployeePerformance,
   delNailEmployeePerformance,
   getNailEmployeePerformance,
+  getNailEmployeePerformanceOptions,
   getNailEmployeePerformanceRanking,
   listNailEmployeePerformance,
   updateNailEmployeePerformance
@@ -188,9 +189,7 @@ import {
   NailEmployeePerformanceRankVO,
   NailEmployeePerformanceVO
 } from '@/api/employee/performance/types';
-import { listNailEmployee } from '@/api/employee/employee';
 import { NailEmployeeVO } from '@/api/employee/employee/types';
-import { listNailServiceItem } from '@/api/nail/item';
 import { NailServiceItemVO } from '@/api/nail/item/types';
 import dayjs from 'dayjs';
 
@@ -251,12 +250,9 @@ const enabledItemOptions = computed(() => itemOptions.value.filter((item) => !it
 const employeeLabel = (item: NailEmployeeVO) => (item.employeeNo ? `${item.name}（${item.employeeNo}）` : item.name || String(item.id));
 
 const loadOptions = async () => {
-  const [employeeRes, itemRes] = await Promise.all([
-    listNailEmployee({ pageNum: 1, pageSize: 500 }),
-    listNailServiceItem({ pageNum: 1, pageSize: 500 })
-  ]);
-  employeeOptions.value = employeeRes.rows || [];
-  itemOptions.value = itemRes.rows || [];
+  const res = await getNailEmployeePerformanceOptions();
+  employeeOptions.value = res.data?.employees || [];
+  itemOptions.value = res.data?.items || [];
 };
 
 const getList = async () => {

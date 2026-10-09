@@ -459,6 +459,21 @@ insert into sys_menu values('2263', '删除', '2122', '4', '#', null, '', 1, 0, 
 insert into sys_menu values('2264', '导出', '2122', '5', '#', null, '', 1, 0, 'F', '0', '0', 'employee:performance:export', '#', 103, 1, sysdate(), null, null, '');
 insert into sys_menu values('2290', '看板查询', '2090', '1', '#', null, '', 1, 0, 'F', '0', '0', 'nail:dashboard:query', '#', 103, 1, sysdate(), null, null, '');
 
+insert into sys_role_menu values(5, 2101);
+insert into sys_role_menu values(5, 2122);
+insert into sys_role_menu values(5, 2260);
+insert into sys_role_menu values(5, 2261);
+insert into sys_role_menu values(5, 2262);
+insert into sys_role_menu values(5, 2263);
+insert into sys_role_menu values(5, 2264);
+insert into sys_role_menu values(6, 2101);
+insert into sys_role_menu values(6, 2122);
+insert into sys_role_menu values(6, 2260);
+insert into sys_role_menu values(6, 2261);
+insert into sys_role_menu values(6, 2262);
+insert into sys_role_menu values(6, 2263);
+insert into sys_role_menu values(6, 2264);
+
 -- 演示数据（字段顺序与建表一致：业务字段在前，租户与审计字段在后）
 insert into nail_store values(1,'MD001','君君美甲旗舰店','13800001111','上海市静安区南京西路1号','君君',1,'0','000000',103,1,sysdate(),null,null,'0','旗舰店');
 insert into nail_store values(2,'MD002','君君美甲徐汇店','13800002222','上海市徐汇区衡山路88号','小徐',2,'0','000000',103,1,sysdate(),null,null,'0','分店');
