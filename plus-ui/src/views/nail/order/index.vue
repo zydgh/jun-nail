@@ -1,5 +1,7 @@
 <template>
   <div class="p-2">
+    <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+      <el-tab-pane label="订单收银" name="orders">
     <transition :enter-active-class="proxy?.animate.searchAnimate.enter" :leave-active-class="proxy?.animate.searchAnimate.leave">
       <div v-show="showSearch" class="mb-[10px]">
         <el-card shadow="hover">
@@ -90,6 +92,30 @@
       </el-table>
       <pagination v-show="total > 0" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" :total="total" @pagination="getList" />
     </el-card>
+      </el-tab-pane>
+      <el-tab-pane label="业绩" name="ranking">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="ranking-header">
+              <span>员工业绩排行</span>
+              <el-radio-group v-model="rankPeriod" @change="loadRanking">
+                <el-radio-button value="day">当天</el-radio-button>
+                <el-radio-button value="week">本周</el-radio-button>
+                <el-radio-button value="month">本月</el-radio-button>
+              </el-radio-group>
+            </div>
+          </template>
+          <div ref="amountChartRef" class="rank-chart"></div>
+          <el-table border :data="rankingList" class="mt-2">
+            <el-table-column label="排名" prop="rank" align="center" width="80" />
+            <el-table-column label="员工" prop="employeeName" align="center" />
+            <el-table-column label="实收金额" prop="totalAmount" align="right" />
+            <el-table-column label="服务单数" prop="serviceCount" align="center" />
+            <el-table-column label="好评数" prop="praiseCount" align="center" />
+          </el-table>
+        </el-card>
+      </el-tab-pane>
+    </el-tabs>
     <el-dialog v-model="dialog.visible" :title="dialog.title" width="640px" append-to-body>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
         <el-form-item label="订单编号" prop="orderNo">
@@ -138,28 +164,6 @@
         </div>
       </template>
     </el-dialog>
-
-    <el-card class="mt-2" shadow="hover">
-      <template #header>
-        <div class="ranking-header">
-          <span>员工业绩排行</span>
-          <el-radio-group v-model="rankPeriod" @change="loadRanking">
-            <el-radio-button value="day">当天</el-radio-button>
-            <el-radio-button value="week">本周</el-radio-button>
-            <el-radio-button value="month">本月</el-radio-button>
-          </el-radio-group>
-        </div>
-      </template>
-      <div ref="amountChartRef" class="rank-chart"></div>
-      <el-table border :data="rankingList" class="mt-2">
-        <el-table-column label="排名" prop="rank" align="center" width="80" />
-        <el-table-column label="员工" prop="employeeName" align="center" />
-        <el-table-column label="实收金额" prop="totalAmount" align="right" />
-        <el-table-column label="服务单数" prop="serviceCount" align="center" />
-        <el-table-column label="好评数" prop="praiseCount" align="center" />
-      </el-table>
-    </el-card>
-
     <el-dialog v-model="checkoutOpen" title="收银下单" width="640px" append-to-body>
       <el-form ref="checkoutFormRef" :model="checkoutForm" :rules="checkoutRules" label-width="100px">
         <el-form-item label="员工" prop="employeeId">
@@ -223,6 +227,7 @@ import * as echarts from 'echarts';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
 const { sys_normal_disable, nail_performance_pay_type } = toRefs<any>(proxy?.useDict('sys_normal_disable', 'nail_performance_pay_type'));
+const activeTab = ref('orders');
 const dataList = ref([] as any[]);
 const buttonLoading = ref(false);
 const loading = ref(true);
@@ -433,7 +438,13 @@ const renderChart = () => {
       yAxis: { type: 'value' },
       series: [{ type: 'bar', data: amounts, barMaxWidth: 48, itemStyle: { color: '#e85d4c', borderRadius: [6, 6, 0, 0] } }]
     }, true);
+    amountChart.value?.resize();
   });
+};
+const handleTabChange = (name: string | number) => {
+  if (name === 'ranking') {
+    loadRanking();
+  }
 };
 const loadRanking = async () => {
   const res = await getNailOrderRanking(rankPeriod.value);
@@ -443,7 +454,6 @@ const loadRanking = async () => {
 
 onMounted(() => {
   getList();
-  loadRanking();
 });
 </script>
 
