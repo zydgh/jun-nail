@@ -65,7 +65,7 @@ public class NailOrderController extends BaseController {
      * @param id 主键
      */
     @SaCheckPermission("nail:order:query")
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     public R<NailOrderVo> getInfo(@NotNull(message = "主键不能为空") @PathVariable Long id) {
         return R.ok(nailOrderService.queryById(id));
     }
