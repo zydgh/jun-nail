@@ -6,6 +6,13 @@ export interface NailOrderVO {
   memberId?: number | string;
   /** 美甲师ID */
   employeeId?: number | string;
+  employeeName?: string;
+  customerName?: string;
+  customerPhone?: string;
+  itemName?: string;
+  praise?: string;
+  praiseImages?: string;
+  praiseImageUrls?: string;
   /** 门店ID */
   storeId?: number | string;
   /** 下单时间 */

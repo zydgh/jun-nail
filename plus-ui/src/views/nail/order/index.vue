@@ -7,8 +7,10 @@
             <el-form-item label="订单编号" prop="orderNo">
               <el-input v-model="queryParams.orderNo" placeholder="请输入订单编号" clearable @keyup.enter="handleQuery" />
             </el-form-item>
-            <el-form-item label="支付方式" prop="payType">
-              <el-input v-model="queryParams.payType" placeholder="请输入支付方式" clearable @keyup.enter="handleQuery" />
+            <el-form-item label="付款方式" prop="payType">
+              <el-select v-model="queryParams.payType" placeholder="请选择付款方式" clearable>
+                <el-option v-for="dict in nail_performance_pay_type" :key="dict.value" :label="dict.label" :value="dict.value" />
+              </el-select>
             </el-form-item>
             <el-form-item label="订单状态" prop="status">
               <el-select v-model="queryParams.status" placeholder="订单状态" clearable>
@@ -46,16 +48,29 @@
       </template>
       <el-table v-loading="loading" border :data="dataList" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
-        <el-table-column label="订单编号" align="center" prop="orderNo" show-overflow-tooltip />
-        <el-table-column label="会员ID" align="center" prop="memberId" show-overflow-tooltip />
-        <el-table-column label="美甲师ID" align="center" prop="employeeId" show-overflow-tooltip />
-        <el-table-column label="门店ID" align="center" prop="storeId" show-overflow-tooltip />
-        <el-table-column label="下单时间" align="center" prop="orderTime" width="160" />
-        <el-table-column label="支付方式" align="center" prop="payType" show-overflow-tooltip />
-        <el-table-column label="订单总额" align="center" prop="totalAmount" show-overflow-tooltip />
-        <el-table-column label="优惠金额" align="center" prop="discountAmount" show-overflow-tooltip />
-        <el-table-column label="实付金额" align="center" prop="payAmount" show-overflow-tooltip />
-        <el-table-column label="赠送积分" align="center" prop="pointAmount" show-overflow-tooltip />
+        <el-table-column label="订单编号" align="center" prop="orderNo" min-width="140" show-overflow-tooltip />
+        <el-table-column label="员工" align="center" prop="employeeName" min-width="100" />
+        <el-table-column label="服务项目" align="center" prop="itemName" min-width="120" show-overflow-tooltip />
+        <el-table-column label="客户" align="center" prop="customerName" min-width="100" />
+        <el-table-column label="手机号" align="center" prop="customerPhone" min-width="120" />
+        <el-table-column label="下单时间" align="center" prop="orderTime" width="165" />
+        <el-table-column label="付款方式" align="center" prop="payType" min-width="100">
+          <template #default="scope">
+            <dict-tag :options="nail_performance_pay_type" :value="scope.row.payType" />
+          </template>
+        </el-table-column>
+        <el-table-column label="实付金额" align="center" prop="payAmount" min-width="100" />
+        <el-table-column label="好评" align="center" width="80">
+          <template #default="scope">
+            <el-tag :type="scope.row.praise === '1' ? 'success' : 'info'">{{ scope.row.praise === '1' ? '是' : '否' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="好评图片" align="center" min-width="100">
+          <template #default="scope">
+            <image-preview v-if="scope.row.praise === '1' && scope.row.praiseImageUrls" :src="scope.row.praiseImageUrls" :width="48" :height="48" />
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="订单状态" align="center" prop="status">
           <template #default="scope">
             <dict-tag :options="sys_normal_disable" :value="scope.row.status" />
@@ -124,24 +139,75 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="checkoutOpen" title="收银下单" width="560px" append-to-body>
-      <el-form :model="checkoutForm" label-width="100px">
-        <el-form-item label="会员ID"><el-input v-model="checkoutForm.memberId" /></el-form-item>
-        <el-form-item label="美甲师ID"><el-input v-model="checkoutForm.employeeId" /></el-form-item>
-        <el-form-item label="门店ID"><el-input v-model="checkoutForm.storeId" /></el-form-item>
-        <el-form-item label="项目ID"><el-input v-model="checkoutForm.itemId" /></el-form-item>
-        <el-form-item label="数量"><el-input v-model="checkoutForm.quantity" /></el-form-item>
-        <el-form-item label="支付方式">
-          <el-select v-model="checkoutForm.payType">
-            <el-option label="余额" value="balance" />
-            <el-option label="微信" value="wechat" />
-            <el-option label="支付宝" value="alipay" />
-            <el-option label="现金" value="cash" />
+    <el-card class="mt-2" shadow="hover">
+      <template #header>
+        <div class="ranking-header">
+          <span>员工业绩排行</span>
+          <el-radio-group v-model="rankPeriod" @change="loadRanking">
+            <el-radio-button value="day">当天</el-radio-button>
+            <el-radio-button value="week">本周</el-radio-button>
+            <el-radio-button value="month">本月</el-radio-button>
+          </el-radio-group>
+        </div>
+      </template>
+      <div ref="amountChartRef" class="rank-chart"></div>
+      <el-table border :data="rankingList" class="mt-2">
+        <el-table-column label="排名" prop="rank" align="center" width="80" />
+        <el-table-column label="员工" prop="employeeName" align="center" />
+        <el-table-column label="实收金额" prop="totalAmount" align="right" />
+        <el-table-column label="服务单数" prop="serviceCount" align="center" />
+        <el-table-column label="好评数" prop="praiseCount" align="center" />
+      </el-table>
+    </el-card>
+
+    <el-dialog v-model="checkoutOpen" title="收银下单" width="640px" append-to-body>
+      <el-form ref="checkoutFormRef" :model="checkoutForm" :rules="checkoutRules" label-width="100px">
+        <el-form-item label="员工" prop="employeeId">
+          <el-select v-model="checkoutForm.employeeId" placeholder="请选择员工" filterable style="width: 100%">
+            <el-option v-for="item in employeeOptions" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="客户姓名" prop="customerName">
+          <el-input v-model="checkoutForm.customerName" placeholder="请输入客户姓名" @blur="handleCustomerBlur" />
+        </el-form-item>
+        <el-form-item label="客户手机号" prop="customerPhone">
+          <el-input v-model="checkoutForm.customerPhone" placeholder="请输入客户手机号" maxlength="20" @blur="handleCustomerBlur" />
+          <div class="member-tip">
+            <el-tag v-if="memberChecked && isMember" type="success" size="small">会员</el-tag>
+            <el-tag v-else-if="memberChecked && !isMember" type="info" size="small">非会员（原价）</el-tag>
+          </div>
+        </el-form-item>
+        <el-form-item label="服务项目" prop="itemId">
+          <el-select v-model="checkoutForm.itemId" placeholder="请选择项目" filterable style="width: 100%" @change="fillAmount">
+            <el-option v-for="item in itemOptions" :key="item.id" :label="item.itemName" :value="item.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="价格类型">
+          <el-radio-group v-model="priceType" :disabled="memberChecked && !isMember" @change="fillAmount">
+            <el-radio-button value="price">原价</el-radio-button>
+            <el-radio-button value="memberPrice" :disabled="memberChecked && !isMember">会员价</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="实收金额" prop="amount">
+          <el-input-number v-model="checkoutForm.amount" :min="0.01" :precision="2" :step="10" controls-position="right" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="付款方式" prop="payType">
+          <el-select v-model="checkoutForm.payType" placeholder="请选择付款方式" style="width: 100%">
+            <el-option v-for="dict in nail_performance_pay_type" :key="dict.value" :label="dict.label" :value="dict.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="客户好评">
+          <el-switch v-model="checkoutForm.praise" active-value="1" inactive-value="0" active-text="好评" inactive-text="未好评" />
+        </el-form-item>
+        <el-form-item v-if="checkoutForm.praise === '1'" label="好评图片">
+          <image-upload v-model="checkoutForm.praiseImages" :limit="5" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="checkoutForm.remark" type="textarea" :rows="2" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button type="primary" @click="submitCheckout">确 定</el-button>
+        <el-button type="primary" :loading="buttonLoading" @click="submitCheckout">确 定</el-button>
         <el-button @click="checkoutOpen = false">取 消</el-button>
       </template>
     </el-dialog>
@@ -149,12 +215,14 @@
 </template>
 
 <script setup name="NailOrder" lang="ts">
-import { listNailOrder, getNailOrder, delNailOrder, addNailOrder, updateNailOrder } from '@/api/nail/order';
-import { NailOrderVO, NailOrderQuery, NailOrderForm } from '@/api/nail/order/types';
-import { checkoutOrder } from '@/api/nail/order';
+import { listNailOrder, getNailOrder, delNailOrder, addNailOrder, updateNailOrder, checkoutOrder, getNailOrderOptions, checkNailOrderMember, getNailOrderRanking } from '@/api/nail/order';
+import { NailOrderVO } from '@/api/nail/order/types';
+import { NailEmployeeVO } from '@/api/employee/employee/types';
+import { NailServiceItemVO } from '@/api/nail/item/types';
+import * as echarts from 'echarts';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
-const { sys_normal_disable } = toRefs<any>(proxy?.useDict('sys_normal_disable'));
+const { sys_normal_disable, nail_performance_pay_type } = toRefs<any>(proxy?.useDict('sys_normal_disable', 'nail_performance_pay_type'));
 const dataList = ref([] as any[]);
 const buttonLoading = ref(false);
 const loading = ref(true);
@@ -258,16 +326,129 @@ const handleExport = () => {
 };
 
 const checkoutOpen = ref(false);
-const checkoutForm = reactive({ memberId: undefined as any, employeeId: undefined as any, storeId: undefined as any, itemId: undefined as any, quantity: 1, payType: 'cash' });
-const handleCheckout = () => { checkoutOpen.value = true; };
-const submitCheckout = async () => {
-  await checkoutOrder(checkoutForm);
-  proxy?.$modal.msgSuccess('下单成功');
-  checkoutOpen.value = false;
-  await getList();
+const checkoutFormRef = ref<ElFormInstance>();
+const employeeOptions = ref<NailEmployeeVO[]>([]);
+const itemOptions = ref<NailServiceItemVO[]>([]);
+const isMember = ref(false);
+const memberChecked = ref(false);
+const priceType = ref<'price' | 'memberPrice'>('price');
+const rankPeriod = ref<'day' | 'week' | 'month'>('day');
+const rankingList = ref<any[]>([]);
+const amountChartRef = ref<HTMLDivElement>();
+const amountChart = shallowRef<echarts.ECharts>();
+const checkoutForm = reactive({
+  memberId: undefined as any,
+  employeeId: undefined as any,
+  customerName: '',
+  customerPhone: '',
+  itemId: undefined as any,
+  quantity: 1,
+  amount: undefined as number | undefined,
+  payType: 'cash',
+  praise: '0',
+  praiseImages: undefined as string | undefined,
+  remark: ''
+});
+const checkoutRules = {
+  employeeId: [{ required: true, message: '请选择员工', trigger: 'change' }],
+  customerName: [{ required: true, message: '请输入客户姓名', trigger: 'blur' }],
+  customerPhone: [{ required: true, message: '请输入客户手机号', trigger: 'blur' }],
+  itemId: [{ required: true, message: '请选择服务项目', trigger: 'change' }],
+  amount: [{ required: true, message: '请输入实收金额', trigger: 'blur' }],
+  payType: [{ required: true, message: '请选择付款方式', trigger: 'change' }]
+};
+const fillAmount = () => {
+  const item = itemOptions.value.find((row) => String(row.id) === String(checkoutForm.itemId));
+  if (!item) return;
+  const raw = priceType.value === 'memberPrice' ? item.memberPrice : item.price;
+  const num = Number(raw || item.price || 0);
+  if (num > 0) checkoutForm.amount = num;
+};
+const handleCustomerBlur = async () => {
+  if (!checkoutForm.customerPhone && !checkoutForm.customerName) {
+    isMember.value = false;
+    memberChecked.value = false;
+    priceType.value = 'price';
+    fillAmount();
+    return;
+  }
+  const res = await checkNailOrderMember({ phone: checkoutForm.customerPhone, name: checkoutForm.customerName });
+  isMember.value = !!res.data?.member;
+  memberChecked.value = true;
+  checkoutForm.memberId = isMember.value ? res.data?.memberId : undefined;
+  priceType.value = isMember.value ? 'memberPrice' : 'price';
+  fillAmount();
+};
+const handleCheckout = async () => {
+  const res = await getNailOrderOptions();
+  employeeOptions.value = res.data?.employees || [];
+  itemOptions.value = res.data?.items || [];
+  Object.assign(checkoutForm, {
+    memberId: undefined,
+    employeeId: employeeOptions.value.length === 1 ? employeeOptions.value[0].id : undefined,
+    customerName: '',
+    customerPhone: '',
+    itemId: undefined,
+    quantity: 1,
+    amount: undefined,
+    payType: 'cash',
+    praise: '0',
+    praiseImages: undefined,
+    remark: ''
+  });
+  isMember.value = false;
+  memberChecked.value = false;
+  priceType.value = 'price';
+  checkoutOpen.value = true;
+};
+const submitCheckout = () => {
+  checkoutFormRef.value?.validate(async (valid) => {
+    if (!valid) return;
+    buttonLoading.value = true;
+    try {
+      const payload = { ...checkoutForm };
+      if (payload.praise !== '1') payload.praiseImages = undefined;
+      await checkoutOrder(payload);
+      proxy?.$modal.msgSuccess('下单成功');
+      checkoutOpen.value = false;
+      await getList();
+      await loadRanking();
+    } finally {
+      buttonLoading.value = false;
+    }
+  });
+};
+const renderChart = () => {
+  nextTick(() => {
+    if (amountChartRef.value && !amountChart.value) {
+      amountChart.value = echarts.init(amountChartRef.value);
+    }
+    const names = rankingList.value.map((item) => item.employeeName || '未知员工');
+    const amounts = rankingList.value.map((item) => Number(item.totalAmount || 0));
+    amountChart.value?.setOption({
+      title: { text: '业绩金额统计', left: 'center', textStyle: { fontSize: 14 } },
+      tooltip: { trigger: 'axis' },
+      grid: { left: 56, right: 24, top: 48, bottom: 40 },
+      xAxis: { type: 'category', data: names },
+      yAxis: { type: 'value' },
+      series: [{ type: 'bar', data: amounts, barMaxWidth: 48, itemStyle: { color: '#e85d4c', borderRadius: [6, 6, 0, 0] } }]
+    }, true);
+  });
+};
+const loadRanking = async () => {
+  const res = await getNailOrderRanking(rankPeriod.value);
+  rankingList.value = res.data || [];
+  renderChart();
 };
 
 onMounted(() => {
   getList();
+  loadRanking();
 });
 </script>
+
+<style scoped>
+.ranking-header { display: flex; align-items: center; justify-content: space-between; }
+.rank-chart { width: 100%; height: 320px; }
+.member-tip { margin-top: 6px; min-height: 22px; }
+</style>

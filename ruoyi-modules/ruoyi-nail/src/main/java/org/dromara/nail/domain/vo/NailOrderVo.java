@@ -4,6 +4,8 @@ import cn.idev.excel.annotation.ExcelIgnoreUnannotated;
 import cn.idev.excel.annotation.ExcelProperty;
 import io.github.linpeilie.annotations.AutoMapper;
 import lombok.Data;
+import org.dromara.common.translation.annotation.Translation;
+import org.dromara.common.translation.constant.TransConstant;
 import org.dromara.nail.domain.NailOrder;
 
 import java.io.Serial;
@@ -47,6 +49,18 @@ public class NailOrderVo implements Serializable {
     @ExcelProperty(value = "美甲师ID")
     private Long employeeId;
 
+    @ExcelProperty(value = "员工")
+    private String employeeName;
+
+    @ExcelProperty(value = "客户姓名")
+    private String customerName;
+
+    @ExcelProperty(value = "客户手机号")
+    private String customerPhone;
+
+    @ExcelProperty(value = "服务项目")
+    private String itemName;
+
     /**
      * 门店ID
      */
@@ -88,6 +102,14 @@ public class NailOrderVo implements Serializable {
      */
     @ExcelProperty(value = "赠送积分")
     private Integer pointAmount;
+
+    @ExcelProperty(value = "是否好评")
+    private String praise;
+
+    private String praiseImages;
+
+    @Translation(type = TransConstant.OSS_ID_TO_URL, mapper = "praiseImages")
+    private String praiseImageUrls;
 
     /**
      * 订单状态

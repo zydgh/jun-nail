@@ -26,3 +26,15 @@ export const checkoutOrder = (data: any) => {
   return request({ url: '/nail/order/checkout', method: 'post', data });
 };
 
+export const getNailOrderOptions = () => {
+  return request({ url: '/nail/order/options', method: 'get' });
+};
+
+export const checkNailOrderMember = (params: { phone?: string; name?: string }) => {
+  return request({ url: '/nail/order/member-check', method: 'get', params });
+};
+
+export const getNailOrderRanking = (period: 'day' | 'week' | 'month') => {
+  return request({ url: '/nail/order/ranking', method: 'get', params: { period } });
+};
+

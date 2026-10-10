@@ -315,6 +315,8 @@ create table nail_order (
   order_no varchar(32) not null comment '订单编号',
   member_id bigint(20) default null comment '会员ID',
   employee_id bigint(20) default null comment '美甲师ID',
+  customer_name varchar(64) default null comment '客户姓名',
+  customer_phone varchar(20) default null comment '客户手机号',
   store_id bigint(20) default null comment '门店ID',
   order_time datetime default null comment '下单时间',
   pay_type varchar(20) default null comment '支付方式',
@@ -322,6 +324,8 @@ create table nail_order (
   discount_amount decimal(10,2) default 0.00 comment '优惠金额',
   pay_amount decimal(10,2) default 0.00 comment '实付金额',
   point_amount int(11) default 0 comment '赠送积分',
+  praise char(1) default '0' comment '是否好评（0否 1是）',
+  praise_images varchar(500) default null comment '好评图片OSS ID',
   status char(1) default '1' comment '订单状态',
 
   tenant_id varchar(20) default '000000' comment '租户编号',
@@ -394,7 +398,7 @@ insert into sys_menu values('2112', '余额记录', '2100', '3', 'balance', 'mem
 insert into sys_menu values('2113', '积分记录', '2100', '4', 'point', 'member/pointLog/index', '', 1, 0, 'C', '0', '0', 'member:point:list', 'chart', 103, 1, sysdate(), null, null, '积分记录');
 insert into sys_menu values('2120', '员工列表', '2101', '1', 'list', 'employee/employee/index', '', 1, 0, 'C', '0', '0', 'employee:employee:list', 'peoples', 103, 1, sysdate(), null, null, '员工列表');
 insert into sys_menu values('2121', '员工排班', '2101', '2', 'shift', 'employee/shift/index', '', 1, 0, 'C', '0', '0', 'employee:shift:list', 'date', 103, 1, sysdate(), null, null, '员工排班');
-insert into sys_menu values('2122', '员工业绩', '2101', '3', 'performance', 'employee/performance/index', '', 1, 0, 'C', '0', '0', 'employee:performance:list', 'trophy', 103, 1, sysdate(), null, null, '员工业绩与排行榜');
+insert into sys_menu values('2122', '员工业绩', '2101', '3', 'performance', 'employee/performance/index', '', 1, 0, 'C', '1', '1', 'employee:performance:list', 'trophy', 103, 1, sysdate(), null, null, '已并入订单收银');
 insert into sys_menu values('2130', '门店管理', '2102', '1', 'store', 'store/store/index', '', 1, 0, 'C', '0', '0', 'store:store:list', 'international', 103, 1, sysdate(), null, null, '门店管理');
 insert into sys_menu values('2131', '服务项目', '2102', '2', 'item', 'nail/item/index', '', 1, 0, 'C', '0', '0', 'nail:item:list', 'list', 103, 1, sysdate(), null, null, '服务项目');
 insert into sys_menu values('2132', '预约管理', '2102', '3', 'appointment', 'nail/appointment/index', '', 1, 0, 'C', '0', '0', 'nail:appointment:list', 'date', 103, 1, sysdate(), null, null, '预约管理');

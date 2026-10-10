@@ -15,17 +15,26 @@ public class NailCheckoutBo {
 
     private Long employeeId;
 
+    private String customerName;
+
+    private String customerPhone;
+
     private Long storeId;
 
     @NotNull(message = "项目不能为空")
     private Long itemId;
 
-    @NotNull(message = "数量不能为空")
     private Integer quantity;
 
     private String payType;
 
+    private BigDecimal amount;
+
     private BigDecimal discountAmount;
+
+    private String praise;
+
+    private String praiseImages;
 
     private String remark;
 }

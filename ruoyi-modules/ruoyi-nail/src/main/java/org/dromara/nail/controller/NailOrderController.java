@@ -16,13 +16,16 @@ import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.web.core.BaseController;
 import org.dromara.nail.domain.bo.NailOrderBo;
+import org.dromara.nail.domain.vo.NailEmployeePerformanceRankVo;
 import org.dromara.nail.domain.vo.NailOrderVo;
+import org.dromara.nail.domain.vo.NailPerformanceMemberCheckVo;
 import org.dromara.nail.service.INailOrderService;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 订单
@@ -101,6 +104,27 @@ public class NailOrderController extends BaseController {
         return toAjax(nailOrderService.deleteWithValidByIds(Arrays.asList(ids), true));
     }
 
+
+    @SaCheckPermission("nail:order:list")
+    @GetMapping("/options")
+    public R<Map<String, Object>> options() {
+        return R.ok(orderCheckoutService.options());
+    }
+
+    @SaCheckPermission("nail:order:list")
+    @GetMapping("/member-check")
+    public R<NailPerformanceMemberCheckVo> memberCheck(
+        @RequestParam(required = false) String phone,
+        @RequestParam(required = false) String name) {
+        return R.ok(orderCheckoutService.checkMember(phone, name));
+    }
+
+    @SaCheckPermission("nail:order:list")
+    @GetMapping("/ranking")
+    public R<List<NailEmployeePerformanceRankVo>> ranking(
+        @RequestParam(defaultValue = "day") String period) {
+        return R.ok(orderCheckoutService.ranking(period));
+    }
 
     /**
      * 收银下单

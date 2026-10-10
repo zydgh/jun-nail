@@ -44,6 +44,10 @@ public class NailOrder extends TenantEntity {
      */
     private Long employeeId;
 
+    private String customerName;
+
+    private String customerPhone;
+
     /**
      * 门店ID
      */
@@ -78,6 +82,10 @@ public class NailOrder extends TenantEntity {
      * 赠送积分
      */
     private Integer pointAmount;
+
+    private String praise;
+
+    private String praiseImages;
 
     /**
      * 订单状态

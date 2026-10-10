@@ -1,8 +1,11 @@
 package org.dromara.nail.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
+import org.dromara.common.satoken.utils.LoginHelper;
 import org.dromara.nail.domain.NailCommission;
 import org.dromara.nail.domain.NailEmployee;
 import org.dromara.nail.domain.NailMember;
@@ -13,7 +16,11 @@ import org.dromara.nail.domain.NailOrder;
 import org.dromara.nail.domain.NailOrderItem;
 import org.dromara.nail.domain.NailServiceItem;
 import org.dromara.nail.domain.bo.NailCheckoutBo;
+import org.dromara.nail.domain.vo.NailEmployeePerformanceRankVo;
+import org.dromara.nail.domain.vo.NailEmployeeVo;
 import org.dromara.nail.domain.vo.NailOrderVo;
+import org.dromara.nail.domain.vo.NailPerformanceMemberCheckVo;
+import org.dromara.nail.domain.vo.NailServiceItemVo;
 import org.dromara.nail.helper.NailDataScopeHelper;
 import org.dromara.nail.mapper.NailCommissionMapper;
 import org.dromara.nail.mapper.NailEmployeeMapper;
@@ -30,7 +37,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 收银结算
@@ -57,24 +71,14 @@ public class NailOrderCheckoutServiceImpl implements INailOrderCheckoutService {
             throw new ServiceException("服务项目不可用");
         }
         int qty = bo.getQuantity() == null || bo.getQuantity() < 1 ? 1 : bo.getQuantity();
+        NailMember member = resolveMember(bo);
         BigDecimal unit = nvl(item.getPrice());
-        NailMember member = null;
-        if (bo.getMemberId() != null) {
-            member = memberMapper.selectById(bo.getMemberId());
-            if (member == null) {
-                throw new ServiceException("会员不存在");
-            }
-            if (item.getMemberPrice() != null) {
-                unit = item.getMemberPrice();
-            }
-            if (member.getLevelId() != null) {
-                NailMemberLevel level = levelMapper.selectById(member.getLevelId());
-                if (level != null && level.getDiscount() != null) {
-                    unit = unit.multiply(level.getDiscount()).setScale(2, RoundingMode.HALF_UP);
-                }
-            }
+        if (member != null && item.getMemberPrice() != null) {
+            unit = item.getMemberPrice();
         }
-        BigDecimal total = unit.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal total = bo.getAmount() != null && bo.getAmount().compareTo(BigDecimal.ZERO) > 0
+            ? bo.getAmount().setScale(2, RoundingMode.HALF_UP)
+            : unit.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
         BigDecimal discount = nvl(bo.getDiscountAmount());
         BigDecimal pay = total.subtract(discount);
         if (pay.compareTo(BigDecimal.ZERO) < 0) {
@@ -99,8 +103,10 @@ public class NailOrderCheckoutServiceImpl implements INailOrderCheckoutService {
         }
         NailOrder order = new NailOrder();
         order.setOrderNo("DD" + System.currentTimeMillis());
-        order.setMemberId(bo.getMemberId());
+        order.setMemberId(member == null ? null : member.getId());
         order.setEmployeeId(bo.getEmployeeId());
+        order.setCustomerName(StringUtils.blankToDefault(bo.getCustomerName(), member == null ? null : member.getName()));
+        order.setCustomerPhone(StringUtils.blankToDefault(bo.getCustomerPhone(), member == null ? null : member.getPhone()));
         order.setStoreId(bo.getStoreId());
         NailDataScopeHelper.fillStoreId(order);
         order.setOrderTime(new Date());
@@ -110,6 +116,8 @@ public class NailOrderCheckoutServiceImpl implements INailOrderCheckoutService {
         order.setPayAmount(pay);
         int points = pay.setScale(0, RoundingMode.DOWN).intValue();
         order.setPointAmount(points);
+        order.setPraise(StringUtils.blankToDefault(bo.getPraise(), "0"));
+        order.setPraiseImages("1".equals(order.getPraise()) ? bo.getPraiseImages() : null);
         order.setStatus("1");
         order.setRemark(bo.getRemark());
         orderMapper.insert(order);
@@ -160,6 +168,114 @@ public class NailOrderCheckoutServiceImpl implements INailOrderCheckoutService {
             }
         }
         return orderMapper.selectVoById(order.getId());
+    }
+
+    @Override
+    public Map<String, Object> options() {
+        LambdaQueryWrapper<NailEmployee> employeeQuery = Wrappers.lambdaQuery();
+        employeeQuery.eq(NailEmployee::getStatus, "0");
+        if (!LoginHelper.isSuperAdmin()) {
+            Long currentEmployeeId = NailDataScopeHelper.currentEmployeeId();
+            if (currentEmployeeId != null) {
+                employeeQuery.eq(NailEmployee::getId, currentEmployeeId);
+            }
+        }
+        List<NailEmployeeVo> employees = employeeMapper.selectVoList(employeeQuery);
+        LambdaQueryWrapper<NailServiceItem> itemQuery = Wrappers.lambdaQuery();
+        itemQuery.eq(NailServiceItem::getStatus, "0");
+        itemQuery.orderByAsc(NailServiceItem::getSort);
+        List<NailServiceItemVo> items = itemMapper.selectVoList(itemQuery);
+        return Map.of("employees", employees, "items", items);
+    }
+
+    @Override
+    public NailPerformanceMemberCheckVo checkMember(String phone, String name) {
+        NailPerformanceMemberCheckVo result = new NailPerformanceMemberCheckVo();
+        result.setMember(false);
+        String phoneValue = StringUtils.trim(phone);
+        String nameValue = StringUtils.trim(name);
+        if (StringUtils.isBlank(phoneValue) && StringUtils.isBlank(nameValue)) {
+            return result;
+        }
+        LambdaQueryWrapper<NailMember> lqw = Wrappers.lambdaQuery();
+        lqw.eq(NailMember::getStatus, "0");
+        if (StringUtils.isNotBlank(phoneValue)) {
+            lqw.eq(NailMember::getPhone, phoneValue);
+        } else {
+            lqw.eq(NailMember::getName, nameValue);
+        }
+        NailDataScopeHelper.applyStoreScope(lqw, "NailMember");
+        lqw.orderByDesc(NailMember::getId);
+        lqw.last("LIMIT 1");
+        NailMember member = memberMapper.selectOne(lqw);
+        if (member == null) {
+            return result;
+        }
+        result.setMember(true);
+        result.setMemberId(member.getId());
+        result.setMemberNo(member.getMemberNo());
+        result.setName(member.getName());
+        result.setPhone(member.getPhone());
+        return result;
+    }
+
+    @Override
+    public List<NailEmployeePerformanceRankVo> ranking(String period) {
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = today;
+        if ("week".equals(period)) {
+            startDate = today.with(DayOfWeek.MONDAY);
+        } else if ("month".equals(period)) {
+            startDate = today.withDayOfMonth(1);
+        }
+        Date start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        Date end = Date.from(today.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+        LambdaQueryWrapper<NailOrder> lqw = Wrappers.lambdaQuery();
+        lqw.ge(NailOrder::getOrderTime, start);
+        lqw.lt(NailOrder::getOrderTime, end);
+        lqw.isNotNull(NailOrder::getEmployeeId);
+        NailDataScopeHelper.applyStoreScope(lqw, "NailOrder");
+        List<NailOrder> orders = orderMapper.selectList(lqw);
+        Map<Long, NailEmployeePerformanceRankVo> ranks = new LinkedHashMap<>();
+        for (NailOrder order : orders) {
+            NailEmployeePerformanceRankVo row = ranks.computeIfAbsent(order.getEmployeeId(), id -> {
+                NailEmployeePerformanceRankVo created = new NailEmployeePerformanceRankVo();
+                created.setEmployeeId(id);
+                created.setTotalAmount(BigDecimal.ZERO);
+                created.setServiceCount(0L);
+                created.setPraiseCount(0L);
+                return created;
+            });
+            row.setTotalAmount(row.getTotalAmount().add(nvl(order.getPayAmount())));
+            row.setServiceCount(row.getServiceCount() + 1);
+            if ("1".equals(order.getPraise())) {
+                row.setPraiseCount(row.getPraiseCount() + 1);
+            }
+        }
+        List<NailEmployeePerformanceRankVo> result = new ArrayList<>(ranks.values());
+        result.sort((a, b) -> b.getTotalAmount().compareTo(a.getTotalAmount()));
+        for (int i = 0; i < result.size(); i++) {
+            NailEmployeePerformanceRankVo row = result.get(i);
+            row.setRank(i + 1);
+            NailEmployee employee = employeeMapper.selectById(row.getEmployeeId());
+            row.setEmployeeName(employee == null ? "未知员工" : employee.getName());
+        }
+        return result;
+    }
+
+    private NailMember resolveMember(NailCheckoutBo bo) {
+        if (bo.getMemberId() != null) {
+            NailMember member = memberMapper.selectById(bo.getMemberId());
+            if (member == null) {
+                throw new ServiceException("会员不存在");
+            }
+            return member;
+        }
+        NailPerformanceMemberCheckVo checked = checkMember(bo.getCustomerPhone(), bo.getCustomerName());
+        if (!Boolean.TRUE.equals(checked.getMember())) {
+            return null;
+        }
+        return memberMapper.selectById(checked.getMemberId());
     }
 
     private BigDecimal nvl(BigDecimal val) {

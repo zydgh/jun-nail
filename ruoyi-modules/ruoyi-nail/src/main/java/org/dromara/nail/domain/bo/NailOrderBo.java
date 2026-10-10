@@ -43,6 +43,10 @@ public class NailOrderBo extends BaseEntity {
      */
     private Long employeeId;
 
+    private String customerName;
+
+    private String customerPhone;
+
     /**
      * 门店ID
      */
@@ -77,6 +81,10 @@ public class NailOrderBo extends BaseEntity {
      * 赠送积分
      */
     private Integer pointAmount;
+
+    private String praise;
+
+    private String praiseImages;
 
     /**
      * 订单状态

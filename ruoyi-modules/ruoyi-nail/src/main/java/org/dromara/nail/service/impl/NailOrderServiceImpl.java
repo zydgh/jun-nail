@@ -8,10 +8,14 @@ import org.dromara.common.core.utils.MapstructUtils;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
+import org.dromara.nail.domain.NailEmployee;
 import org.dromara.nail.domain.NailOrder;
+import org.dromara.nail.domain.NailOrderItem;
 import org.dromara.nail.domain.bo.NailOrderBo;
 import org.dromara.nail.domain.vo.NailOrderVo;
 import org.dromara.nail.helper.NailDataScopeHelper;
+import org.dromara.nail.mapper.NailEmployeeMapper;
+import org.dromara.nail.mapper.NailOrderItemMapper;
 import org.dromara.nail.mapper.NailOrderMapper;
 import org.dromara.nail.service.INailOrderService;
 import org.springframework.stereotype.Service;
@@ -19,6 +23,7 @@ import org.springframework.stereotype.Service;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 订单Service业务层处理
@@ -28,22 +33,49 @@ import java.util.Map;
 public class NailOrderServiceImpl implements INailOrderService {
 
     private final NailOrderMapper baseMapper;
+    private final NailEmployeeMapper employeeMapper;
+    private final NailOrderItemMapper orderItemMapper;
 
     @Override
     public NailOrderVo queryById(Long id) {
-        return baseMapper.selectVoById(id);
+        NailOrderVo vo = baseMapper.selectVoById(id);
+        if (vo != null) {
+            enrich(List.of(vo));
+        }
+        return vo;
     }
 
     @Override
     public TableDataInfo<NailOrderVo> queryPageList(NailOrderBo bo, PageQuery pageQuery) {
         LambdaQueryWrapper<NailOrder> lqw = buildQueryWrapper(bo);
         Page<NailOrderVo> result = baseMapper.selectVoPage(pageQuery.build(), lqw);
+        enrich(result.getRecords());
         return TableDataInfo.build(result);
     }
 
     @Override
     public List<NailOrderVo> queryList(NailOrderBo bo) {
-        return baseMapper.selectVoList(buildQueryWrapper(bo));
+        List<NailOrderVo> list = baseMapper.selectVoList(buildQueryWrapper(bo));
+        enrich(list);
+        return list;
+    }
+
+    private void enrich(List<NailOrderVo> list) {
+        if (list == null || list.isEmpty()) {
+            return;
+        }
+        List<Long> employeeIds = list.stream().map(NailOrderVo::getEmployeeId).filter(id -> id != null).distinct().toList();
+        Map<Long, String> names = employeeIds.isEmpty() ? Map.of() : employeeMapper.selectList(
+            Wrappers.<NailEmployee>lambdaQuery().in(NailEmployee::getId, employeeIds)
+        ).stream().collect(Collectors.toMap(NailEmployee::getId, NailEmployee::getName, (a, b) -> a));
+        List<Long> orderIds = list.stream().map(NailOrderVo::getId).toList();
+        Map<Long, String> itemNames = orderItemMapper.selectList(
+            Wrappers.<NailOrderItem>lambdaQuery().in(NailOrderItem::getOrderId, orderIds)
+        ).stream().collect(Collectors.toMap(NailOrderItem::getOrderId, NailOrderItem::getItemName, (a, b) -> a));
+        list.forEach(row -> {
+            row.setEmployeeName(names.getOrDefault(row.getEmployeeId(), ""));
+            row.setItemName(itemNames.getOrDefault(row.getId(), ""));
+        });
     }
 
     private LambdaQueryWrapper<NailOrder> buildQueryWrapper(NailOrderBo bo) {
