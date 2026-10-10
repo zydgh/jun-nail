@@ -9,6 +9,11 @@
                 <el-option v-for="item in employeeOptions" :key="item.id" :label="employeeLabel(item)" :value="item.id" />
               </el-select>
             </el-form-item>
+            <el-form-item label="付款方式" prop="payType">
+              <el-select v-model="queryParams.payType" placeholder="请选择付款方式" clearable>
+                <el-option v-for="dict in nail_performance_pay_type" :key="dict.value" :label="dict.label" :value="dict.value" />
+              </el-select>
+            </el-form-item>
             <el-form-item label="客户" prop="customerName">
               <el-input v-model="queryParams.customerName" placeholder="客户姓名" clearable @keyup.enter="handleQuery" />
             </el-form-item>
@@ -66,6 +71,11 @@
             <el-table-column label="员工" prop="employeeName" align="center" min-width="100" />
             <el-table-column label="业绩金额" prop="amount" align="right" min-width="110">
               <template #default="scope">¥ {{ Number(scope.row.amount || 0).toFixed(2) }}</template>
+            </el-table-column>
+            <el-table-column label="付款方式" prop="payType" align="center" min-width="100">
+              <template #default="scope">
+                <dict-tag :options="nail_performance_pay_type" :value="scope.row.payType" />
+              </template>
             </el-table-column>
             <el-table-column label="服务项目" prop="itemName" align="center" min-width="130" show-overflow-tooltip />
             <el-table-column label="客户姓名" prop="customerName" align="center" min-width="100" />
@@ -181,6 +191,11 @@
         <el-form-item label="业绩金额" prop="amount">
           <el-input-number v-model="form.amount" :min="0.01" :precision="2" :step="10" controls-position="right" style="width: 100%" />
         </el-form-item>
+        <el-form-item label="付款方式" prop="payType">
+          <el-select v-model="form.payType" placeholder="请选择付款方式" style="width: 100%">
+            <el-option v-for="dict in nail_performance_pay_type" :key="dict.value" :label="dict.label" :value="dict.value" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="消费时间" prop="consumeTime">
           <el-date-picker
             v-model="form.consumeTime"
@@ -231,6 +246,7 @@ import * as echarts from 'echarts';
 import dayjs from 'dayjs';
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
+const { nail_performance_pay_type } = toRefs<any>(proxy?.useDict('nail_performance_pay_type'));
 const activeTab = ref('records');
 const loading = ref(false);
 const rankLoading = ref(false);
@@ -270,6 +286,7 @@ const initFormData: NailEmployeePerformanceForm = {
   id: undefined,
   employeeId: undefined,
   amount: undefined,
+  payType: 'cash',
   itemId: undefined,
   customerName: undefined,
   customerPhone: undefined,
@@ -285,12 +302,14 @@ const data = reactive({
     pageNum: 1,
     pageSize: 10,
     employeeId: undefined,
+    payType: undefined,
     customerName: undefined,
     customerPhone: undefined
   } as NailEmployeePerformanceQuery,
   rules: {
     employeeId: [{ required: true, message: '请选择员工', trigger: 'change' }],
     amount: [{ required: true, message: '请输入业绩金额', trigger: 'blur' }],
+    payType: [{ required: true, message: '请选择付款方式', trigger: 'change' }],
     itemId: [{ required: true, message: '请选择服务项目', trigger: 'change' }],
     customerName: [{ required: true, message: '请输入客户姓名', trigger: 'blur' }],
     customerPhone: [{ required: true, message: '请输入客户手机号', trigger: 'blur' }],

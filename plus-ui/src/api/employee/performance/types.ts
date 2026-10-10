@@ -4,6 +4,7 @@ export interface NailEmployeePerformanceVO {
   employeeName?: string;
   storeId?: number | string;
   amount?: number;
+  payType?: string;
   itemId?: number | string;
   itemName?: string;
   customerName?: string;
@@ -19,6 +20,7 @@ export interface NailEmployeePerformanceForm extends BaseEntity {
   id?: number | string;
   employeeId?: number | string;
   amount?: number;
+  payType?: string;
   itemId?: number | string;
   customerName?: string;
   customerPhone?: string;
@@ -31,6 +33,7 @@ export interface NailEmployeePerformanceForm extends BaseEntity {
 export interface NailEmployeePerformanceQuery extends PageQuery {
   employeeId?: number | string;
   itemId?: number | string;
+  payType?: string;
   customerName?: string;
   customerPhone?: string;
   praise?: string;

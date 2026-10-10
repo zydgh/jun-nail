@@ -15,6 +15,7 @@ INSERT INTO sys_dict_type VALUES(22, '000000', '积分变动类型', 'nail_point
 INSERT INTO sys_dict_type VALUES(23, '000000', '预约状态', 'nail_appoint_status', 103, 1, sysdate(), null, null, '预约状态');
 INSERT INTO sys_dict_type VALUES(24, '000000', '订单状态', 'nail_order_status', 103, 1, sysdate(), null, null, '订单状态');
 INSERT INTO sys_dict_type VALUES(25, '000000', '支付方式', 'nail_pay_type', 103, 1, sysdate(), null, null, '支付方式');
+INSERT INTO sys_dict_type VALUES(29, '000000', '业绩付款方式', 'nail_performance_pay_type', 103, 1, sysdate(), null, null, '员工业绩付款方式');
 INSERT INTO sys_dict_type VALUES(26, '000000', '员工职位', 'nail_employee_position', 103, 1, sysdate(), null, null, '员工职位');
 INSERT INTO sys_dict_type VALUES(27, '000000', '项目分类', 'nail_item_category', 103, 1, sysdate(), null, null, '项目分类');
 INSERT INTO sys_dict_type VALUES(28, '000000', '提成结算状态', 'nail_commission_status', 103, 1, sysdate(), null, null, '提成结算');
@@ -41,6 +42,11 @@ INSERT INTO sys_dict_data VALUES(250, '000000', 1, '余额', 'balance', 'nail_pa
 INSERT INTO sys_dict_data VALUES(251, '000000', 2, '微信', 'wechat', 'nail_pay_type', '', 'success', 'N', 103, 1, sysdate(), null, null, '');
 INSERT INTO sys_dict_data VALUES(252, '000000', 3, '支付宝', 'alipay', 'nail_pay_type', '', 'warning', 'N', 103, 1, sysdate(), null, null, '');
 INSERT INTO sys_dict_data VALUES(253, '000000', 4, '现金', 'cash', 'nail_pay_type', '', 'info', 'Y', 103, 1, sysdate(), null, null, '');
+INSERT INTO sys_dict_data VALUES(282, '000000', 1, '美团', 'meituan', 'nail_performance_pay_type', '', 'warning', 'N', 103, 1, sysdate(), null, null, '');
+INSERT INTO sys_dict_data VALUES(283, '000000', 2, '抖音', 'douyin', 'nail_performance_pay_type', '', 'danger', 'N', 103, 1, sysdate(), null, null, '');
+INSERT INTO sys_dict_data VALUES(284, '000000', 3, '现金', 'cash', 'nail_performance_pay_type', '', 'info', 'Y', 103, 1, sysdate(), null, null, '');
+INSERT INTO sys_dict_data VALUES(285, '000000', 4, '支付宝', 'alipay', 'nail_performance_pay_type', '', 'primary', 'N', 103, 1, sysdate(), null, null, '');
+INSERT INTO sys_dict_data VALUES(286, '000000', 5, '微信', 'wechat', 'nail_performance_pay_type', '', 'success', 'N', 103, 1, sysdate(), null, null, '');
 INSERT INTO sys_dict_data VALUES(260, '000000', 1, '店长', 'manager', 'nail_employee_position', '', 'primary', 'N', 103, 1, sysdate(), null, null, '');
 INSERT INTO sys_dict_data VALUES(261, '000000', 2, '美甲师', 'artist', 'nail_employee_position', '', 'success', 'Y', 103, 1, sysdate(), null, null, '');
 INSERT INTO sys_dict_data VALUES(262, '000000', 3, '前台', 'front', 'nail_employee_position', '', 'info', 'N', 103, 1, sysdate(), null, null, '');
@@ -232,6 +238,7 @@ create table nail_employee_performance (
   employee_id bigint(20) not null comment '员工ID',
   store_id bigint(20) default null comment '门店ID',
   amount decimal(10,2) not null default 0.00 comment '业绩金额',
+  pay_type varchar(20) default null comment '付款方式',
   item_id bigint(20) default null comment '项目ID',
   item_name varchar(64) default null comment '项目名称',
   customer_name varchar(64) default null comment '客户姓名',

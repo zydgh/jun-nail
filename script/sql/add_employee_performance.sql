@@ -3,6 +3,7 @@ create table if not exists nail_employee_performance (
   employee_id bigint(20) not null comment '员工ID',
   store_id bigint(20) default null comment '门店ID',
   amount decimal(10,2) not null default 0.00 comment '业绩金额',
+  pay_type varchar(20) default null comment '付款方式',
   item_id bigint(20) default null comment '项目ID',
   item_name varchar(64) default null comment '项目名称',
   customer_name varchar(64) default null comment '客户姓名',

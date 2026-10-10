@@ -33,6 +33,8 @@ public class NailEmployeePerformance extends TenantEntity {
 
     private BigDecimal amount;
 
+    private String payType;
+
     private Long itemId;
 
     private String itemName;

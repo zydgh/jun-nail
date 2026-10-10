@@ -33,6 +33,9 @@ public class NailEmployeePerformanceBo extends BaseEntity {
     @DecimalMin(value = "0.01", message = "业绩金额必须大于0", groups = {AddGroup.class, EditGroup.class})
     private BigDecimal amount;
 
+    @NotBlank(message = "付款方式不能为空", groups = {AddGroup.class, EditGroup.class})
+    private String payType;
+
     @NotNull(message = "服务项目不能为空", groups = {AddGroup.class, EditGroup.class})
     private Long itemId;
 

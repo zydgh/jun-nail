@@ -213,6 +213,8 @@ public class NailEmployeePerformanceServiceImpl
             NailEmployeePerformance::getStoreId, bo.getStoreId());
         lqw.eq(bo.getItemId() != null,
             NailEmployeePerformance::getItemId, bo.getItemId());
+        lqw.eq(StringUtils.isNotBlank(bo.getPayType()),
+            NailEmployeePerformance::getPayType, bo.getPayType());
         lqw.like(StringUtils.isNotBlank(bo.getItemName()),
             NailEmployeePerformance::getItemName, bo.getItemName());
         lqw.like(StringUtils.isNotBlank(bo.getCustomerName()),
