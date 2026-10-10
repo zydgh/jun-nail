@@ -35,9 +35,15 @@ SELECT 284, '000000', 3, '现金', 'cash', 'nail_performance_pay_type', '', 'inf
 WHERE NOT EXISTS (SELECT 1 FROM sys_dict_data WHERE dict_code = 284 OR (dict_type = 'nail_performance_pay_type' AND dict_value = 'cash'));
 
 INSERT INTO sys_dict_data (dict_code, tenant_id, dict_sort, dict_label, dict_value, dict_type, css_class, list_class, is_default, create_dept, create_by, create_time, remark)
-SELECT 285, '000000', 4, '支付宝', 'alipay', 'nail_performance_pay_type', '', 'primary', 'N', 103, 1, sysdate(), ''
-WHERE NOT EXISTS (SELECT 1 FROM sys_dict_data WHERE dict_code = 285 OR (dict_type = 'nail_performance_pay_type' AND dict_value = 'alipay'));
+SELECT 286, '000000', 4, '微信', 'wechat', 'nail_performance_pay_type', '', 'success', 'N', 103, 1, sysdate(), ''
+WHERE NOT EXISTS (SELECT 1 FROM sys_dict_data WHERE dict_code = 286 OR (dict_type = 'nail_performance_pay_type' AND dict_value = 'wechat'));
 
 INSERT INTO sys_dict_data (dict_code, tenant_id, dict_sort, dict_label, dict_value, dict_type, css_class, list_class, is_default, create_dept, create_by, create_time, remark)
-SELECT 286, '000000', 5, '微信', 'wechat', 'nail_performance_pay_type', '', 'success', 'N', 103, 1, sysdate(), ''
-WHERE NOT EXISTS (SELECT 1 FROM sys_dict_data WHERE dict_code = 286 OR (dict_type = 'nail_performance_pay_type' AND dict_value = 'wechat'));
+SELECT 285, '000000', 5, '支付宝', 'alipay', 'nail_performance_pay_type', '', 'primary', 'N', 103, 1, sysdate(), ''
+WHERE NOT EXISTS (SELECT 1 FROM sys_dict_data WHERE dict_code = 285 OR (dict_type = 'nail_performance_pay_type' AND dict_value = 'alipay'));
+
+UPDATE sys_dict_data SET dict_sort = 1 WHERE dict_type = 'nail_performance_pay_type' AND dict_value = 'meituan';
+UPDATE sys_dict_data SET dict_sort = 2 WHERE dict_type = 'nail_performance_pay_type' AND dict_value = 'douyin';
+UPDATE sys_dict_data SET dict_sort = 3 WHERE dict_type = 'nail_performance_pay_type' AND dict_value = 'cash';
+UPDATE sys_dict_data SET dict_sort = 4 WHERE dict_type = 'nail_performance_pay_type' AND dict_value = 'wechat';
+UPDATE sys_dict_data SET dict_sort = 5 WHERE dict_type = 'nail_performance_pay_type' AND dict_value = 'alipay';
