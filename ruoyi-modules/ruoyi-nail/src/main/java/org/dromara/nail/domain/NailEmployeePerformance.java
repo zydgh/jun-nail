@@ -29,6 +29,8 @@ public class NailEmployeePerformance extends TenantEntity {
 
     private Long employeeId;
 
+    private Long orderId;
+
     private Long storeId;
 
     private BigDecimal amount;

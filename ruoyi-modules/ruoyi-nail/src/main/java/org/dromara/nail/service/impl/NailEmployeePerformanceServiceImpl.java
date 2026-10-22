@@ -172,6 +172,7 @@ public class NailEmployeePerformanceServiceImpl
         fillItemName(add);
         NailDataScopeHelper.fillStoreId(add);
         normalizePraise(add);
+        ensureOrderUnique(add.getOrderId(), null);
         boolean flag = baseMapper.insert(add) > 0;
         if (flag) {
             bo.setId(add.getId());
@@ -190,6 +191,10 @@ public class NailEmployeePerformanceServiceImpl
         } else {
             bindEmployee(update);
         }
+        if (update.getOrderId() == null) {
+            update.setOrderId(exist.getOrderId());
+        }
+        ensureOrderUnique(update.getOrderId(), exist.getId());
         fillItemName(update);
         normalizePraise(update);
         return baseMapper.updateById(update) > 0;
@@ -248,6 +253,18 @@ public class NailEmployeePerformanceServiceImpl
             throw new ServiceException("员工不存在");
         }
         entity.setStoreId(employee.getStoreId());
+    }
+
+    private void ensureOrderUnique(Long orderId, Long selfId) {
+        if (orderId == null) {
+            return;
+        }
+        LambdaQueryWrapper<NailEmployeePerformance> lqw = Wrappers.lambdaQuery();
+        lqw.eq(NailEmployeePerformance::getOrderId, orderId);
+        lqw.ne(selfId != null, NailEmployeePerformance::getId, selfId);
+        if (baseMapper.selectCount(lqw) > 0) {
+            throw new ServiceException("该订单已登记业绩");
+        }
     }
 
     private void fillItemName(NailEmployeePerformance entity) {
