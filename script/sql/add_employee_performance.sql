@@ -1,6 +1,7 @@
 create table if not exists nail_employee_performance (
   id bigint(20) not null comment '主键',
   employee_id bigint(20) not null comment '员工ID',
+  order_id bigint(20) default null comment '订单ID',
   store_id bigint(20) default null comment '门店ID',
   amount decimal(10,2) not null default 0.00 comment '业绩金额',
   pay_type varchar(20) default null comment '付款方式',
@@ -20,6 +21,7 @@ create table if not exists nail_employee_performance (
   del_flag char(1) default '0' comment '删除标志（0正常 1删除）',
   remark varchar(500) default null comment '备注',
   primary key (id),
+  unique key uk_nail_performance_order_id (order_id),
   index idx_nail_performance_emp_time (employee_id, consume_time),
   index idx_nail_performance_store_time (store_id, consume_time)
 ) engine=innodb default charset=utf8mb4 collate=utf8mb4_general_ci comment='员工业绩表';

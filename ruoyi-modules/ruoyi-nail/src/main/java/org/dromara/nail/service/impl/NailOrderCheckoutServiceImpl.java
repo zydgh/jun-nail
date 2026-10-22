@@ -8,6 +8,7 @@ import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.satoken.utils.LoginHelper;
 import org.dromara.nail.domain.NailCommission;
 import org.dromara.nail.domain.NailEmployee;
+import org.dromara.nail.domain.NailEmployeePerformance;
 import org.dromara.nail.domain.NailMember;
 import org.dromara.nail.domain.NailMemberBalanceLog;
 import org.dromara.nail.domain.NailMemberLevel;
@@ -24,6 +25,7 @@ import org.dromara.nail.domain.vo.NailServiceItemVo;
 import org.dromara.nail.helper.NailDataScopeHelper;
 import org.dromara.nail.mapper.NailCommissionMapper;
 import org.dromara.nail.mapper.NailEmployeeMapper;
+import org.dromara.nail.mapper.NailEmployeePerformanceMapper;
 import org.dromara.nail.mapper.NailMemberBalanceLogMapper;
 import org.dromara.nail.mapper.NailMemberLevelMapper;
 import org.dromara.nail.mapper.NailMemberMapper;
@@ -32,6 +34,7 @@ import org.dromara.nail.mapper.NailOrderItemMapper;
 import org.dromara.nail.mapper.NailOrderMapper;
 import org.dromara.nail.mapper.NailServiceItemMapper;
 import org.dromara.nail.service.INailOrderCheckoutService;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,6 +65,7 @@ public class NailOrderCheckoutServiceImpl implements INailOrderCheckoutService {
     private final NailOrderItemMapper orderItemMapper;
     private final NailEmployeeMapper employeeMapper;
     private final NailCommissionMapper commissionMapper;
+    private final NailEmployeePerformanceMapper performanceMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -166,6 +170,7 @@ public class NailOrderCheckoutServiceImpl implements INailOrderCheckoutService {
                 commission.setStatus("0");
                 commissionMapper.insert(commission);
             }
+            saveCheckoutPerformance(order, item);
         }
         return orderMapper.selectVoById(order.getId());
     }
@@ -261,6 +266,63 @@ public class NailOrderCheckoutServiceImpl implements INailOrderCheckoutService {
             row.setEmployeeName(employee == null ? "未知员工" : employee.getName());
         }
         return result;
+    }
+
+    /**
+     * 收银订单写入一条员工业绩。同一 orderId 已有记录时跳过，避免重复提交插两条。
+     */
+    private void saveCheckoutPerformance(NailOrder order, NailServiceItem item) {
+        LambdaQueryWrapper<NailEmployeePerformance> exists = Wrappers.lambdaQuery();
+        exists.eq(NailEmployeePerformance::getOrderId, order.getId());
+        if (performanceMapper.selectCount(exists) > 0) {
+            return;
+        }
+        NailEmployeePerformance performance = new NailEmployeePerformance();
+        performance.setOrderId(order.getId());
+        performance.setEmployeeId(order.getEmployeeId());
+        performance.setStoreId(order.getStoreId());
+        performance.setAmount(order.getPayAmount());
+        performance.setPayType(order.getPayType());
+        performance.setItemId(item.getId());
+        performance.setItemName(item.getItemName());
+        performance.setCustomerName(order.getCustomerName());
+        performance.setCustomerPhone(order.getCustomerPhone());
+        performance.setConsumeTime(order.getOrderTime());
+        performance.setPraise(StringUtils.blankToDefault(order.getPraise(), "0"));
+        if ("1".equals(performance.getPraise())) {
+            performance.setPraiseImages(order.getPraiseImages());
+        }
+        performance.setRemark(checkoutPerformanceRemark(order));
+        try {
+            performanceMapper.insert(performance);
+        } catch (RuntimeException ex) {
+            if (!isDuplicatePerformance(ex)) {
+                throw ex;
+            }
+        }
+    }
+
+    private String checkoutPerformanceRemark(NailOrder order) {
+        String prefix = "收银订单" + StringUtils.blankToDefault(order.getOrderNo(), "");
+        if (StringUtils.isBlank(order.getRemark())) {
+            return prefix;
+        }
+        String remark = prefix + " " + order.getRemark().trim();
+        return remark.length() <= 500 ? remark : remark.substring(0, 500);
+    }
+
+    private boolean isDuplicatePerformance(Throwable ex) {
+        Throwable current = ex;
+        while (current != null) {
+            if (current instanceof DuplicateKeyException) {
+                return true;
+            }
+            if (current instanceof java.sql.SQLException sqlException && sqlException.getErrorCode() == 1062) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private NailMember resolveMember(NailCheckoutBo bo) {

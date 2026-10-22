@@ -27,6 +27,8 @@ public class NailEmployeePerformanceBo extends BaseEntity {
 
     private Long employeeId;
 
+    private Long orderId;
+
     private Long storeId;
 
     @NotNull(message = "业绩金额不能为空", groups = {AddGroup.class, EditGroup.class})

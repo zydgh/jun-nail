@@ -66,4 +66,7 @@ public class NailEmployeePerformanceVo implements Serializable {
 
     @ExcelProperty("备注")
     private String remark;
+
+    @ExcelProperty("订单ID")
+    private Long orderId;
 }
