@@ -1,7 +1,14 @@
 -- 君君美甲业务库（在 ry-vue 系统库上增量执行）
 SET NAMES utf8mb4;
 
-ALTER TABLE sys_user ADD COLUMN must_change_pwd char(1) DEFAULT '1' COMMENT '是否必须修改初始密码（0否 1是）' AFTER remark;
+SET @col_exists := (
+  SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_user' AND COLUMN_NAME = 'must_change_pwd'
+);
+SET @sql := IF(@col_exists = 0,
+  'ALTER TABLE sys_user ADD COLUMN must_change_pwd char(1) DEFAULT ''1'' COMMENT ''是否必须修改初始密码（0否 1是）'' AFTER remark',
+  'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 UPDATE sys_user SET must_change_pwd = '1' WHERE user_name = 'admin';
 UPDATE sys_user SET nick_name = '君君管理员' WHERE user_id = 1;
 INSERT INTO sys_config VALUES(20, '000000', '首次登录强制改密', 'sys.account.forceModifyPwd', 'true', 'Y', 103, 1, sysdate(), null, null, 'true:首次登录强制修改密码');
@@ -510,6 +517,6 @@ insert into nail_member values(3,'HY10003','王芳','13600003333','1','1988-03-0
 insert into nail_member_balance_log values(1,1,'recharge',800.00,0.00,800.00,'CZ001','000000',103,1,sysdate(),null,null,'0','开卡充值');
 insert into nail_member_balance_log values(2,1,'consume',-120.00,800.00,680.00,'DDDEMO','000000',103,1,sysdate(),null,null,'0','消费扣款');
 
-insert into nail_order values(1,'DD10001',1,1,1,sysdate(),'balance',198.00,20.00,178.00,178,'1','000000',103,1,sysdate(),null,null,'0','演示订单');
+insert into nail_order values(1,'DD10001',1,1,'张敏','13600001111',1,sysdate(),'balance',198.00,20.00,178.00,178,'0',null,'1','000000',103,1,sysdate(),null,null,'0','演示订单');
 insert into nail_order_item values(1,1,2,'日式美甲',1,198.00,198.00,'000000',103,1,sysdate(),null,null,'0',null);
 insert into nail_commission values(1,1,1,'DD10001',0.20,35.60,'0',null,'000000',103,1,sysdate(),null,null,'0',null);
